@@ -172,31 +172,32 @@ impl ApplicationContext for Application {
         let index_buffer =
             glium::IndexBuffer::new(display, PrimitiveType::TrianglesList, &[0u16, 1, 2]).unwrap();
 
-        // compiling shaders and linking them together
         let program = program!(display,
-            100 => {
+            330 => {
                 vertex: "
-                    #version 100
+                    #version 330
 
-                    uniform lowp mat4 matrix;
+                    uniform mat4 matrix;
 
-                    attribute lowp vec2 position;
-                    attribute lowp vec3 color;
+                    in vec2 position;
+                    in vec3 color;
 
-                    varying lowp vec3 vColor;
+                    out vec3 vColor;
 
                     void main() {
-                        gl_Position = vec4(position, 0.0, 1.0) * matrix;
+                        gl_Position = matrix * vec4(position, 0.0, 1.0);
                         vColor = color;
                     }
                 ",
 
                 fragment: "
-                    #version 100
-                    varying lowp vec3 vColor;
+                    #version 330
+
+                    in vec3 vColor;
+                    out vec4 FragColor;
 
                     void main() {
-                        gl_FragColor = vec4(vColor, 1.0);
+                        FragColor = vec4(vColor, 1.0);
                     }
                 ",
             },
@@ -212,7 +213,6 @@ impl ApplicationContext for Application {
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
-        // For this example a simple identity matrix suffices
         let uniforms = uniform! {
             matrix: [
                 [1.0, 0.0, 0.0, 0.0],
@@ -221,8 +221,6 @@ impl ApplicationContext for Application {
                 [0.0, 0.0, 0.0, 1.0f32]
             ]
         };
-
-        // Now we can draw the triangle
         frame.clear_color(0.0, 0.0, 0.0, 0.0);
         frame
             .draw(
