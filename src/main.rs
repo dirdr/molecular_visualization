@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate glium;
 
-use std::fs;
+use std::{f32::consts::PI, fs};
 
 use glium::{glutin::surface::WindowSurface, Surface};
 use molecular_visualization::{
@@ -44,10 +44,11 @@ impl ApplicationContext for Application {
                     out vec3 v_normal;
 
                     uniform mat4 model;
+                    uniform mat4 projection;
 
                     void main() {
                         v_normal = transpose(inverse(mat3(model))) * normal;
-                        gl_Position = model * vec4(position, 1.0);
+                        gl_Position = projection * model * vec4(position, 1.0);
                     }
                 ",
 
@@ -66,22 +67,43 @@ impl ApplicationContext for Application {
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
+
+        let perspective = {
+            let (width, height) = frame.get_dimensions();
+            let aspect_ratio = height as f32 / width as f32;
+
+            let fov: f32 = PI / 3.0;
+            let zfar = 1024.0;
+            let znear = 0.1;
+
+            let f = 1.0 / (fov / 2.0).tan();
+
+            [
+                [f * aspect_ratio, 0.0, 0.0, 0.0],
+                [0.0, f, 0.0, 0.0],
+                [0.0, 0.0, (zfar + znear) / (zfar - znear), 1.0],
+                [0.0, 0.0, -(2.0 * zfar * znear) / (zfar - znear), 0.0],
+            ]
+        };
+
         let uniforms = uniform! {
             model: [
                 [0.01, 0.0, 0.0, 0.0],
                 [0.0, 0.01, 0.0, 0.0],
                 [0.0, 0.0, 0.01, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32]
+                [0.0, 0.0, 2.5, 1.0f32]
             ],
             u_light: [-1.0, 0.4, 0.9f32],
+            projection: perspective,
         };
 
         let params = glium::DrawParameters {
             depth: glium::Depth {
-                test: glium::draw_parameters::DepthTest::IfLess,
+                test: glium::DepthTest::IfLess,
                 write: true,
                 ..Default::default()
             },
+            backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
             ..Default::default()
         };
 
