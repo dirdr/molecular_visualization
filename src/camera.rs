@@ -1,6 +1,6 @@
-use std::{f32::consts::PI, io::Read};
+use std::f32::consts::PI;
 
-use nalgebra::{Matrix4, Point3};
+use nalgebra::{Matrix4, Point3, Vector3};
 
 /// Define a generic camera contract
 pub trait Camera {
@@ -20,13 +20,13 @@ pub struct Placed {
 
 pub struct Pointed {
     pub target: Point3<f32>,
-    pub up: Point3<f32>,
+    pub up: Vector3<f32>,
 }
 
 pub struct Ready {
     pub pos: Point3<f32>,
     pub target: Point3<f32>,
-    pub up: Point3<f32>,
+    pub up: Vector3<f32>,
 }
 
 /// Camera that use a perspective projection.
@@ -61,7 +61,7 @@ impl PerspectiveCamera<Virtual> {
         }
     }
 
-    pub fn point(self, target: Point3<f32>, up: Point3<f32>) -> PerspectiveCamera<Pointed> {
+    pub fn point(self, target: Point3<f32>, up: Vector3<f32>) -> PerspectiveCamera<Pointed> {
         PerspectiveCamera::<Pointed> {
             state: Pointed { target, up },
             fov: self.fov,
@@ -73,7 +73,7 @@ impl PerspectiveCamera<Virtual> {
 }
 
 impl PerspectiveCamera<Placed> {
-    pub fn point(self, target: Point3<f32>, up: Point3<f32>) -> PerspectiveCamera<Ready> {
+    pub fn point(self, target: Point3<f32>, up: Vector3<f32>) -> PerspectiveCamera<Ready> {
         PerspectiveCamera::<Ready> {
             state: Ready {
                 target,
@@ -106,11 +106,11 @@ impl PerspectiveCamera<Pointed> {
 
 impl Camera for PerspectiveCamera<Ready> {
     fn get_view_matrix(&self) -> Matrix4<f32> {
-        todo!()
+        Matrix4::look_at_rh(&self.state.pos, &self.state.target, &self.state.up)
     }
 
     fn get_projection_matrix(&self) -> Matrix4<f32> {
-        todo!()
+        Matrix4::new_perspective(self.aspect_ratio, self.fov, self.znear, self.zfar)
     }
 }
 
