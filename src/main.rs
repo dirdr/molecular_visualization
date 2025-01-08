@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate glium;
 
+use std::fs;
+
 use glium::{glutin::surface::WindowSurface, Surface};
 use molecular_visualization::{
     backend::{ApplicationContext, State},
@@ -28,6 +30,9 @@ impl ApplicationContext for Application {
         )
         .unwrap();
 
+        let fragment_shader = fs::read_to_string("./resources/shaders/gouraud.frag")
+            .expect("Failed to read fragment shader");
+
         let program = program!(display,
             410 => {
                 vertex: "
@@ -36,22 +41,17 @@ impl ApplicationContext for Application {
                     in vec3 position;
                     in vec3 normal;
 
+                    out vec3 v_normal;
+
                     uniform mat4 model;
 
                     void main() {
+                        v_normal = transpose(inverse(mat3(model))) * normal;
                         gl_Position = model * vec4(position, 1.0);
                     }
                 ",
 
-                fragment: "
-                    #version 410 core
-
-                    out vec4 FragColor;
-
-                    void main() {
-                        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-                    }
-                ",
+                fragment: &fragment_shader,
             },
         )
         .unwrap();
@@ -72,7 +72,8 @@ impl ApplicationContext for Application {
                 [0.0, 0.01, 0.0, 0.0],
                 [0.0, 0.0, 0.01, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32]
-            ]
+            ],
+            u_light: [-1.0, 0.4, 0.9f32],
         };
         frame.clear_color(0.0, 0.0, 1.0, 1.0);
         frame
