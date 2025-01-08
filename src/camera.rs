@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, io::Read};
 
 use nalgebra::{Matrix4, Point3};
 
@@ -8,9 +8,26 @@ pub trait Camera {
     fn get_projection_matrix(&self) -> Matrix4<f32>;
 }
 
-pub trait Place {}
+pub trait CameraState {}
 
-pub trait Point {}
+/// Define the initial state of the camera,
+/// which is not placed nor pointed, thus not existing in the scene
+pub struct Virtual {}
+
+pub struct Placed {
+    pub pos: Point3<f32>,
+}
+
+pub struct Pointed {
+    pub target: Point3<f32>,
+    pub up: Point3<f32>,
+}
+
+pub struct Ready {
+    pub pos: Point3<f32>,
+    pub target: Point3<f32>,
+    pub up: Point3<f32>,
+}
 
 /// Camera that use a perspective projection.
 pub struct PerspectiveCamera<S: CameraState> {
@@ -34,19 +51,60 @@ impl Default for PerspectiveCamera<Virtual> {
 }
 
 impl PerspectiveCamera<Virtual> {
-    pub fn place(pos: Point3<f32>) -> PerspectiveCamera<Placed> {
-        todo!()
+    pub fn place(self, pos: Point3<f32>) -> PerspectiveCamera<Placed> {
+        PerspectiveCamera::<Placed> {
+            state: Placed { pos },
+            fov: self.fov,
+            aspect_ratio: self.aspect_ratio,
+            znear: self.znear,
+            zfar: self.zfar,
+        }
     }
 
-    pub fn point(target: Point3<f32>, up: Point3<f32>) -> PerspectiveCamera<Pointed> {
-        todo!()
+    pub fn point(self, target: Point3<f32>, up: Point3<f32>) -> PerspectiveCamera<Pointed> {
+        PerspectiveCamera::<Pointed> {
+            state: Pointed { target, up },
+            fov: self.fov,
+            aspect_ratio: self.aspect_ratio,
+            znear: self.znear,
+            zfar: self.zfar,
+        }
     }
 }
 
-impl<S> Camera for PerspectiveCamera<S>
-where
-    S: CameraState + Place + Point,
-{
+impl PerspectiveCamera<Placed> {
+    pub fn point(self, target: Point3<f32>, up: Point3<f32>) -> PerspectiveCamera<Ready> {
+        PerspectiveCamera::<Ready> {
+            state: Ready {
+                target,
+                up,
+                pos: self.state.pos,
+            },
+            fov: self.fov,
+            aspect_ratio: self.aspect_ratio,
+            znear: self.znear,
+            zfar: self.zfar,
+        }
+    }
+}
+
+impl PerspectiveCamera<Pointed> {
+    pub fn place(self, pos: Point3<f32>) -> PerspectiveCamera<Ready> {
+        PerspectiveCamera::<Ready> {
+            state: Ready {
+                pos,
+                target: self.state.target,
+                up: self.state.up,
+            },
+            fov: self.fov,
+            aspect_ratio: self.aspect_ratio,
+            znear: self.znear,
+            zfar: self.zfar,
+        }
+    }
+}
+
+impl Camera for PerspectiveCamera<Ready> {
     fn get_view_matrix(&self) -> Matrix4<f32> {
         todo!()
     }
@@ -56,25 +114,7 @@ where
     }
 }
 
-pub struct Placed {
-    pos: Point3<f32>,
-}
-
-pub struct Pointed {
-    target: Point3<f32>,
-    up: Point3<f32>,
-}
-
-/// Define the initial state of the camera,
-/// which is not placed nor pointed, thus not existing in the scene
-pub struct Virtual {}
-
-pub trait CameraState {}
-
+impl CameraState for Virtual {}
 impl CameraState for Placed {}
 impl CameraState for Pointed {}
-impl CameraState for Virtual {}
-
-impl Place for Placed {}
-
-impl Point for Pointed {}
+impl CameraState for Ready {}
