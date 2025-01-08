@@ -75,14 +75,24 @@ impl ApplicationContext for Application {
             ],
             u_light: [-1.0, 0.4, 0.9f32],
         };
-        frame.clear_color(0.0, 0.0, 1.0, 1.0);
+
+        let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        frame.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
         frame
             .draw(
                 (&self.vertex_buffer, &self.normals_buffer),
                 &self.index_buffer,
                 &self.program,
                 &uniforms,
-                &Default::default(),
+                &params,
             )
             .unwrap();
         frame.finish().unwrap();
