@@ -19,12 +19,17 @@ pub trait ApplicationContext {
     const WINDOW_TITLE: &'static str;
 }
 
+/// Main State container,
+/// Contains the glium OpenGL Context : `display`,
+/// the OS window wrapper (winit): `window` and the application `context`
 pub struct State<T> {
     pub display: glium::Display<WindowSurface>,
     pub window: glium::winit::window::Window,
     pub context: T,
 }
 
+/// Handle the application lifecycles events using winit,
+/// impl for this struct gonna be where we handle all the events of the os window.
 struct AppLifecycle<T> {
     state: Option<State<T>>,
     close_promptly: bool,
@@ -93,15 +98,24 @@ impl<T: ApplicationContext + 'static> ApplicationHandler<()> for AppLifecycle<T>
 }
 
 impl<T: ApplicationContext + 'static> State<T> {
+    /// Creates a new window and a new OpenGL Context.
     pub fn new(event_loop: &glium::winit::event_loop::ActiveEventLoop) -> Self {
         let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new()
             .with_title(T::WINDOW_TITLE)
             .build(event_loop);
-
         let version = display.get_opengl_version();
         let version_string = display.get_opengl_version_string();
+
+        // This application has been tested with OpenGL 4.1 Metal, the requirements or this version
+        // or above, glsl core is used so previous openGL version are not permitted.
         println!("OpenGL version: {:?}", version);
         println!("OpenGL version string: {}", version_string);
+        assert!(
+            *version >= crate::OPEN_GL_TARGET,
+            "OpenGL version {:?} is not sufficient for GLSL {}. Required: OpenGL 4.1 or higher",
+            *version,
+            crate::GLSL_TARGET,
+        );
 
         Self::from_display_window(display, window)
     }

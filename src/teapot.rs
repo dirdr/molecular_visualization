@@ -1,5 +1,8 @@
 use glium::implement_vertex;
 
+/// This module contains a simple Teapot 3d models, already proloaded with rust code (Simpler than
+/// loading a obj file for testing basic opengl setup)
+/// This code was taken from the glium tutorial : https://glium.github.io/glium/book/tuto-07-shape.html
 #[derive(Copy, Clone)]
 pub struct Vertex {
     position: (f32, f32, f32),

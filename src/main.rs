@@ -16,6 +16,13 @@ struct Application {
     pub program: glium::Program,
 }
 
+#[derive(Copy, Clone)]
+pub struct Vertex {
+    position: [f32; 3],
+    normal: [f32; 3],
+    texture: [f32; 2],
+}
+
 impl ApplicationContext for Application {
     const WINDOW_TITLE: &'static str = "PDB Viewer - Adrien Pelfresne - FIB 2025";
 
