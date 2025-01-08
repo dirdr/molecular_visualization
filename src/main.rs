@@ -32,7 +32,7 @@ impl ApplicationContext for Application {
         let vertex_shader = fs::read_to_string("./resources/shaders/shader.vert")
             .expect("Failed to read Vertex shader");
 
-        let fragment_shader = fs::read_to_string("./resources/shaders/gouraud.frag")
+        let fragment_shader = fs::read_to_string("./resources/shaders/bill_phong.frag")
             .expect("Failed to read fragment shader");
 
         let program = program!(display,
@@ -73,6 +73,7 @@ impl ApplicationContext for Application {
         };
 
         let view = view_matrix(&[2.0, -1.0, 1.0], &[-2.0, 1.0, 1.0], &[0.0, 1.0, 0.0]);
+        let light = [1.4, 0.4, -0.7f32];
 
         let uniforms = uniform! {
             model: [
@@ -81,9 +82,9 @@ impl ApplicationContext for Application {
                 [0.0, 0.0, 0.01, 0.0],
                 [0.0, 0.0, 2.5, 1.0f32]
             ],
-            u_light: [-1.0, 0.4, 0.9f32],
-            projection: perspective,
             view: view,
+            projection: perspective,
+            u_light: light,
         };
 
         let params = glium::DrawParameters {
@@ -92,7 +93,7 @@ impl ApplicationContext for Application {
                 write: true,
                 ..Default::default()
             },
-            backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
+            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
             ..Default::default()
         };
 
