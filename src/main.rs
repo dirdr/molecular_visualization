@@ -1,80 +1,55 @@
 #[macro_use]
 extern crate glium;
 
-use glium::{glutin::surface::WindowSurface, index::PrimitiveType, Surface};
-use molecular_visualization::backend::{ApplicationContext, State};
-
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2],
-    color: [f32; 3],
-}
-
-implement_vertex!(Vertex, position, color);
+use glium::{glutin::surface::WindowSurface, Surface};
+use molecular_visualization::{
+    backend::{ApplicationContext, State},
+    teapot::{self},
+    utils::Vertex,
+};
 
 struct Application {
-    pub vertex_buffer: glium::VertexBuffer<Vertex>,
+    pub vertex_buffer: glium::VertexBuffer<teapot::Vertex>,
+    pub normals_buffer: glium::VertexBuffer<teapot::Normal>,
     pub index_buffer: glium::IndexBuffer<u16>,
     pub program: glium::Program,
 }
 
 impl ApplicationContext for Application {
-    const WINDOW_TITLE: &'static str = "PDB Viewer";
+    const WINDOW_TITLE: &'static str = "PDB Viewer - Adrien Pelfresne - FIB 2025";
 
     fn new(display: &glium::Display<WindowSurface>) -> Self {
-        let vertex_buffer = {
-            glium::VertexBuffer::new(
-                display,
-                &[
-                    Vertex {
-                        position: [-0.5, -0.5],
-                        color: [0.0, 1.0, 0.0],
-                    },
-                    Vertex {
-                        position: [0.0, 0.5],
-                        color: [0.0, 0.0, 1.0],
-                    },
-                    Vertex {
-                        position: [0.5, -0.5],
-                        color: [1.0, 0.0, 0.0],
-                    },
-                ],
-            )
-            .unwrap()
-        };
-
-        // building the index buffer
-        let index_buffer =
-            glium::IndexBuffer::new(display, PrimitiveType::TrianglesList, &[0u16, 1, 2]).unwrap();
+        let positions = glium::VertexBuffer::new(display, &teapot::VERTICES).unwrap();
+        let normals = glium::VertexBuffer::new(display, &teapot::NORMALS).unwrap();
+        let indices = glium::IndexBuffer::new(
+            display,
+            glium::index::PrimitiveType::TrianglesList,
+            &teapot::INDICES,
+        )
+        .unwrap();
 
         let program = program!(display,
-            330 => {
+            410 => {
                 vertex: "
-                    #version 330
+                    #version 410 core
 
-                    uniform mat4 view_matrix;
-                    uniform mat4 model_matrix;
-                    uniform mat4 projection_matrix;
+                    in vec3 position;
+                    in vec3 normal;
 
-                    in vec2 position;
-                    in vec3 color;
-
-                    out vec3 vColor;
+                    uniform mat4 model;
 
                     void main() {
-                        gl_Position = projection_matrix * view_matrix * model_matrix * vec4(position, 0.0, 1.0);
-                        vColor = color;
+                        gl_Position = model * vec4(position, 1.0);
                     }
                 ",
 
                 fragment: "
-                    #version 330
+                    #version 410 core
 
-                    in vec3 vColor;
                     out vec4 FragColor;
 
                     void main() {
-                        FragColor = vec4(vColor, 1.0);
+                        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
                     }
                 ",
             },
@@ -82,8 +57,9 @@ impl ApplicationContext for Application {
         .unwrap();
 
         Self {
-            vertex_buffer,
-            index_buffer,
+            vertex_buffer: positions,
+            normals_buffer: normals,
+            index_buffer: indices,
             program,
         }
     }
@@ -91,17 +67,17 @@ impl ApplicationContext for Application {
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
         let uniforms = uniform! {
-            matrix: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
+            model: [
+                [0.01, 0.0, 0.0, 0.0],
+                [0.0, 0.01, 0.0, 0.0],
+                [0.0, 0.0, 0.01, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32]
             ]
         };
-        frame.clear_color(0.0, 0.0, 0.0, 0.0);
+        frame.clear_color(0.0, 0.0, 1.0, 1.0);
         frame
             .draw(
-                &self.vertex_buffer,
+                (&self.vertex_buffer, &self.normals_buffer),
                 &self.index_buffer,
                 &self.program,
                 &uniforms,

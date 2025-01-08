@@ -97,6 +97,12 @@ impl<T: ApplicationContext + 'static> State<T> {
         let (window, display) = glium::backend::glutin::SimpleWindowBuilder::new()
             .with_title(T::WINDOW_TITLE)
             .build(event_loop);
+
+        let version = display.get_opengl_version();
+        let version_string = display.get_opengl_version_string();
+        println!("OpenGL version: {:?}", version);
+        println!("OpenGL version string: {}", version_string);
+
         Self::from_display_window(display, window)
     }
 

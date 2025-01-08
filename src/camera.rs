@@ -23,14 +23,14 @@ pub struct Camera<S: CameraState> {
     marker: std::marker::PhantomData<S>,
 }
 
-impl<S> Camera<S>
-where
-    S: CameraState,
-{
-    pub fn new() -> Self {
-        Self {
-            pos: Point3::origin(),
-            target: Point3::origin(),
-        }
-    }
-}
+// impl<S> Camera<S>
+// where
+//     S: CameraState,
+// {
+//     pub fn new() -> Self {
+//         Self {
+//             pos: Point3::origin(),
+//             target: Point3::origin(),
+//         }
+//     }
+// }
