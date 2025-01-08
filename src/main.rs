@@ -7,7 +7,6 @@ use glium::{glutin::surface::WindowSurface, Surface};
 use molecular_visualization::{
     backend::{ApplicationContext, State},
     teapot::{self},
-    utils::Vertex,
 };
 
 struct Application {
@@ -44,11 +43,12 @@ impl ApplicationContext for Application {
                     out vec3 v_normal;
 
                     uniform mat4 model;
+                    uniform mat4 view;
                     uniform mat4 projection;
 
                     void main() {
                         v_normal = transpose(inverse(mat3(model))) * normal;
-                        gl_Position = projection * model * vec4(position, 1.0);
+                        gl_Position = projection * view * model * vec4(position, 1.0);
                     }
                 ",
 
@@ -86,6 +86,8 @@ impl ApplicationContext for Application {
             ]
         };
 
+        let view = view_matrix(&[2.0, -1.0, 1.0], &[-2.0, 1.0, 1.0], &[0.0, 1.0, 0.0]);
+
         let uniforms = uniform! {
             model: [
                 [0.01, 0.0, 0.0, 0.0],
@@ -95,6 +97,7 @@ impl ApplicationContext for Application {
             ],
             u_light: [-1.0, 0.4, 0.9f32],
             projection: perspective,
+            view: view,
         };
 
         let params = glium::DrawParameters {
@@ -119,6 +122,46 @@ impl ApplicationContext for Application {
             .unwrap();
         frame.finish().unwrap();
     }
+}
+
+fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
+    let f = {
+        let f = direction;
+        let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
+        let len = len.sqrt();
+        [f[0] / len, f[1] / len, f[2] / len]
+    };
+
+    let s = [
+        up[1] * f[2] - up[2] * f[1],
+        up[2] * f[0] - up[0] * f[2],
+        up[0] * f[1] - up[1] * f[0],
+    ];
+
+    let s_norm = {
+        let len = s[0] * s[0] + s[1] * s[1] + s[2] * s[2];
+        let len = len.sqrt();
+        [s[0] / len, s[1] / len, s[2] / len]
+    };
+
+    let u = [
+        f[1] * s_norm[2] - f[2] * s_norm[1],
+        f[2] * s_norm[0] - f[0] * s_norm[2],
+        f[0] * s_norm[1] - f[1] * s_norm[0],
+    ];
+
+    let p = [
+        -position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
+        -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
+        -position[0] * f[0] - position[1] * f[1] - position[2] * f[2],
+    ];
+
+    [
+        [s_norm[0], u[0], f[0], 0.0],
+        [s_norm[1], u[1], f[1], 0.0],
+        [s_norm[2], u[2], f[2], 0.0],
+        [p[0], p[1], p[2], 1.0],
+    ]
 }
 
 fn main() {
