@@ -1,21 +1,25 @@
 #[macro_use]
 extern crate glium;
 
-use std::{f32::consts::PI, fs};
+use std::fs;
 
 use glium::{glutin::surface::WindowSurface, Surface};
 use molecular_visualization::{
     backend::{ApplicationContext, State},
+    camera::{Camera, PerspectiveCamera, Ready, Virtual},
     teapot::{self},
 };
+use nalgebra::{Point3, Vector3};
 
 struct Application {
     pub vertex_buffer: glium::VertexBuffer<teapot::Vertex>,
     pub normals_buffer: glium::VertexBuffer<teapot::Normal>,
     pub index_buffer: glium::IndexBuffer<u16>,
     pub program: glium::Program,
+    pub camera: PerspectiveCamera<Ready>,
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct Vertex {
     position: [f32; 3],
@@ -50,47 +54,49 @@ impl ApplicationContext for Application {
         )
         .unwrap();
 
+        let pos = Point3::new(2.0, 2.0, 0.5);
+        let target = Point3::new(0.0, 0.0, 0.0);
+        let up = Vector3::y();
+
+        let camera = PerspectiveCamera::<Virtual> {
+            ..Default::default()
+        }
+        .place(pos)
+        .point(target, up);
+
         Self {
             vertex_buffer: positions,
             normals_buffer: normals,
             index_buffer: indices,
             program,
+            camera,
         }
     }
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
+        let (width, height) = frame.get_dimensions();
+        let aspect_ratio = width as f32 / height as f32;
 
-        let perspective = {
-            let (width, height) = frame.get_dimensions();
-            let aspect_ratio = height as f32 / width as f32;
+        // HACK - the aspect ratio is passed dynamically at each frame mainly to avoid scaling with
+        // a fixed base aspect ratio.
+        let projection = self.camera.get_projection_matrix(aspect_ratio);
+        let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
-            let fov: f32 = PI / 3.0;
-            let zfar = 1024.0;
-            let znear = 0.1;
+        let view = self.camera.get_view_matrix();
+        let view_array: [[f32; 4]; 4] = *view.as_ref();
 
-            let f = 1.0 / (fov / 2.0).tan();
-
-            [
-                [f * aspect_ratio, 0.0, 0.0, 0.0],
-                [0.0, f, 0.0, 0.0],
-                [0.0, 0.0, (zfar + znear) / (zfar - znear), 1.0],
-                [0.0, 0.0, -(2.0 * zfar * znear) / (zfar - znear), 0.0],
-            ]
-        };
-
-        let view = view_matrix(&[2.0, -1.0, 1.0], &[-2.0, 1.0, 1.0], &[0.0, 1.0, 0.0]);
-        let light = [1.4, 0.4, -0.7f32];
+        let light: [f32; 3] = [1.0, 1.0, 1.0];
 
         let uniforms = uniform! {
             model: [
                 [0.01, 0.0, 0.0, 0.0],
                 [0.0, 0.01, 0.0, 0.0],
                 [0.0, 0.0, 0.01, 0.0],
-                [0.0, 0.0, 2.5, 1.0f32]
+                [0.0, 0.0, 0.0, 1.0f32]
             ],
-            view: view,
-            projection: perspective,
+            view: view_array,
+            projection: projection_array,
             u_light: light,
         };
 
@@ -100,7 +106,7 @@ impl ApplicationContext for Application {
                 write: true,
                 ..Default::default()
             },
-            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
+            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
             ..Default::default()
         };
 
@@ -116,46 +122,6 @@ impl ApplicationContext for Application {
             .unwrap();
         frame.finish().unwrap();
     }
-}
-
-fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
-    let f = {
-        let f = direction;
-        let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
-        let len = len.sqrt();
-        [f[0] / len, f[1] / len, f[2] / len]
-    };
-
-    let s = [
-        up[1] * f[2] - up[2] * f[1],
-        up[2] * f[0] - up[0] * f[2],
-        up[0] * f[1] - up[1] * f[0],
-    ];
-
-    let s_norm = {
-        let len = s[0] * s[0] + s[1] * s[1] + s[2] * s[2];
-        let len = len.sqrt();
-        [s[0] / len, s[1] / len, s[2] / len]
-    };
-
-    let u = [
-        f[1] * s_norm[2] - f[2] * s_norm[1],
-        f[2] * s_norm[0] - f[0] * s_norm[2],
-        f[0] * s_norm[1] - f[1] * s_norm[0],
-    ];
-
-    let p = [
-        -position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
-        -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
-        -position[0] * f[0] - position[1] * f[1] - position[2] * f[2],
-    ];
-
-    [
-        [s_norm[0], u[0], f[0], 0.0],
-        [s_norm[1], u[1], f[1], 0.0],
-        [s_norm[2], u[2], f[2], 0.0],
-        [p[0], p[1], p[2], 1.0],
-    ]
 }
 
 fn main() {
