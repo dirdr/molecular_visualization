@@ -29,29 +29,15 @@ impl ApplicationContext for Application {
         )
         .unwrap();
 
+        let vertex_shader = fs::read_to_string("./resources/shaders/shader.vert")
+            .expect("Failed to read Vertex shader");
+
         let fragment_shader = fs::read_to_string("./resources/shaders/gouraud.frag")
             .expect("Failed to read fragment shader");
 
         let program = program!(display,
             410 => {
-                vertex: "
-                    #version 410 core
-
-                    in vec3 position;
-                    in vec3 normal;
-
-                    out vec3 v_normal;
-
-                    uniform mat4 model;
-                    uniform mat4 view;
-                    uniform mat4 projection;
-
-                    void main() {
-                        v_normal = transpose(inverse(mat3(model))) * normal;
-                        gl_Position = projection * view * model * vec4(position, 1.0);
-                    }
-                ",
-
+                vertex: &vertex_shader,
                 fragment: &fragment_shader,
             },
         )
