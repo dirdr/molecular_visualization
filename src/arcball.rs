@@ -17,7 +17,7 @@ impl ArcballControl {
             start: None,
             width,
             height,
-            radius: 1.0,
+            radius: 0.5,
         }
     }
 
@@ -76,7 +76,7 @@ impl ArcballControl {
 
         let res = (self.width.min(self.height) - 1.0).max(1.0);
         let nx = (2.0 * x - self.width - 1.0) / res;
-        let ny = (2.0 * y - self.height - 1.0) / res;
+        let ny = -(2.0 * y - self.height - 1.0) / res;
 
         let d = nx * nx + ny * ny;
         let r2 = self.radius * self.radius;

@@ -62,7 +62,7 @@ impl ApplicationContext for Application {
         )
         .unwrap();
 
-        let pos = Point3::new(2.0, 2.0, 0.5);
+        let pos = Point3::new(0.0, 0.0, 4.0);
         let target = Point3::new(0.0, 0.0, 0.0);
         let up = Vector3::y();
 
@@ -120,15 +120,6 @@ impl ApplicationContext for Application {
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
-        let (width, height) = frame.get_dimensions();
-        let aspect_ratio = width as f32 / height as f32;
-
-        // HACK - the aspect ratio is passed dynamically at each frame mainly to avoid scaling with
-        // a fixed base aspect ratio.
-        let projection = self.camera.get_projection_matrix(aspect_ratio);
-        let projection_array: [[f32; 4]; 4] = *projection.as_ref();
-        let view = self.camera.get_view_matrix();
-        let view_array: [[f32; 4]; 4] = *view.as_ref();
 
         let light: [f32; 3] = [1.0, 1.0, 1.0];
 
@@ -141,11 +132,20 @@ impl ApplicationContext for Application {
         ]);
 
         let rotation = self.arcball.get_rotation_matrix();
+        let model: [[f32; 4]; 4] = (rotation * model).into();
 
-        let final_model: [[f32; 4]; 4] = (rotation * model).into();
+        let view = self.camera.get_view_matrix();
+        let view_array: [[f32; 4]; 4] = view.into();
+
+        let (width, height) = frame.get_dimensions();
+        let aspect_ratio = width as f32 / height as f32;
+        // HACK - the aspect ratio is passed dynamically at each frame mainly to avoid scaling with
+        // a fixed base aspect ratio.
+        let projection = self.camera.get_projection_matrix(aspect_ratio);
+        let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
         let uniforms = uniform! {
-            model: final_model,
+            model: model,
             view: view_array,
             projection: projection_array,
             u_light: light,
