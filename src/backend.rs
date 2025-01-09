@@ -7,15 +7,17 @@ use glium::{
 };
 
 pub trait ApplicationContext {
-    fn draw_frame(&mut self, _display: &glium::Display<WindowSurface>) {}
     fn new(display: &glium::Display<WindowSurface>) -> Self;
-    fn update(&mut self) {}
+
     fn handle_window_event(
         &mut self,
         _event: &glium::winit::event::WindowEvent,
         _window: &glium::winit::window::Window,
-    ) {
-    }
+    );
+
+    fn draw_frame(&mut self, _display: &glium::Display<WindowSurface>) {}
+    fn update(&mut self) {}
+
     const WINDOW_TITLE: &'static str;
 }
 
@@ -47,6 +49,9 @@ impl<T: ApplicationContext + 'static> ApplicationHandler<()> for AppLifecycle<T>
         self.state = None;
     }
 
+    /// This is the entrypoint for winit window event,
+    /// window related jobs are handled here before passing the events
+    /// To the application context struct, see `ApplicationContext` impl.
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -54,12 +59,12 @@ impl<T: ApplicationContext + 'static> ApplicationHandler<()> for AppLifecycle<T>
         event: WindowEvent,
     ) {
         match event {
-            glium::winit::event::WindowEvent::Resized(new_size) => {
+            WindowEvent::Resized(new_size) => {
                 if let Some(state) = &self.state {
                     state.display.resize(new_size.into());
                 }
             }
-            glium::winit::event::WindowEvent::RedrawRequested => {
+            WindowEvent::RedrawRequested => {
                 if let Some(state) = &mut self.state {
                     state.context.update();
                     state.context.draw_frame(&state.display);
@@ -70,7 +75,7 @@ impl<T: ApplicationContext + 'static> ApplicationHandler<()> for AppLifecycle<T>
             }
             // Exit the event loop when requested (by closing the window for example) or when
             // pressing the Esc key.
-            glium::winit::event::WindowEvent::CloseRequested
+            WindowEvent::CloseRequested
             | glium::winit::event::WindowEvent::KeyboardInput {
                 event:
                     glium::winit::event::KeyEvent {

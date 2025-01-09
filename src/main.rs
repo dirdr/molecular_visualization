@@ -3,13 +3,21 @@ extern crate glium;
 
 use std::fs;
 
-use glium::{glutin::surface::WindowSurface, Surface};
+use glium::{
+    glutin::surface::WindowSurface,
+    winit::{
+        dpi::PhysicalPosition,
+        event::{ElementState, WindowEvent},
+    },
+    Surface,
+};
 use molecular_visualization::{
+    arcball::ArcballControl,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     teapot::{self},
 };
-use nalgebra::{Point3, Vector3};
+use nalgebra::{Matrix4, Point3, Vector3};
 
 struct Application {
     pub vertex_buffer: glium::VertexBuffer<teapot::Vertex>,
@@ -17,6 +25,8 @@ struct Application {
     pub index_buffer: glium::IndexBuffer<u16>,
     pub program: glium::Program,
     pub camera: PerspectiveCamera<Ready>,
+    pub arcball: ArcballControl,
+    pub last_cursor_position: Option<PhysicalPosition<f64>>,
 }
 
 #[allow(dead_code)]
@@ -28,8 +38,6 @@ pub struct Vertex {
 }
 
 impl ApplicationContext for Application {
-    const WINDOW_TITLE: &'static str = "PDB Viewer - Adrien Pelfresne - FIB 2025";
-
     fn new(display: &glium::Display<WindowSurface>) -> Self {
         let positions = glium::VertexBuffer::new(display, &teapot::VERTICES).unwrap();
         let normals = glium::VertexBuffer::new(display, &teapot::NORMALS).unwrap();
@@ -64,12 +72,49 @@ impl ApplicationContext for Application {
         .place(pos)
         .point(target, up);
 
+        let (width, height) = display.get_framebuffer_dimensions();
+        let arcball = ArcballControl::new(width as f32, height as f32);
+
         Self {
             vertex_buffer: positions,
             normals_buffer: normals,
             index_buffer: indices,
             program,
             camera,
+            arcball,
+            last_cursor_position: None,
+        }
+    }
+
+    fn handle_window_event(
+        &mut self,
+        event: &glium::winit::event::WindowEvent,
+        _window: &glium::winit::window::Window,
+    ) {
+        match event {
+            WindowEvent::CursorMoved { position, .. } => {
+                self.last_cursor_position = Some(*position);
+                self.arcball
+                    .mouse_move(position.x as f32, position.y as f32);
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                if *button == glium::winit::event::MouseButton::Left {
+                    match state {
+                        ElementState::Pressed => {
+                            if let Some(pos) = self.last_cursor_position {
+                                self.arcball.mouse_down(pos.x as f32, pos.y as f32);
+                            }
+                        }
+                        ElementState::Released => {
+                            self.arcball.mouse_up();
+                        }
+                    }
+                }
+            }
+            WindowEvent::Resized(size) => {
+                self.arcball.resize(size.width as f32, size.height as f32);
+            }
+            _ => {}
         }
     }
 
@@ -82,19 +127,25 @@ impl ApplicationContext for Application {
         // a fixed base aspect ratio.
         let projection = self.camera.get_projection_matrix(aspect_ratio);
         let projection_array: [[f32; 4]; 4] = *projection.as_ref();
-
         let view = self.camera.get_view_matrix();
         let view_array: [[f32; 4]; 4] = *view.as_ref();
 
         let light: [f32; 3] = [1.0, 1.0, 1.0];
 
+        #[rustfmt::skip]
+        let model: Matrix4<f32> = Matrix4::<f32>::from_row_slice(&[
+            0.01, 0.0, 0.0, 0.0,
+            0.0, 0.01, 0.0, 0.0,
+            0.0, 0.0, 0.01, 0.0,
+            0.0, 0.0, 0.0, 1.0f32,
+        ]);
+
+        let rotation = self.arcball.get_rotation_matrix();
+
+        let final_model: [[f32; 4]; 4] = (rotation * model).into();
+
         let uniforms = uniform! {
-            model: [
-                [0.01, 0.0, 0.0, 0.0],
-                [0.0, 0.01, 0.0, 0.0],
-                [0.0, 0.0, 0.01, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32]
-            ],
+            model: final_model,
             view: view_array,
             projection: projection_array,
             u_light: light,
@@ -110,6 +161,11 @@ impl ApplicationContext for Application {
             ..Default::default()
         };
 
+        self.arcball.resize(
+            frame.get_dimensions().0 as f32,
+            frame.get_dimensions().1 as f32,
+        );
+
         frame.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
         frame
             .draw(
@@ -122,6 +178,8 @@ impl ApplicationContext for Application {
             .unwrap();
         frame.finish().unwrap();
     }
+
+    const WINDOW_TITLE: &'static str = "PDB Viewer - Adrien Pelfresne - FIB 2025";
 }
 
 fn main() {
