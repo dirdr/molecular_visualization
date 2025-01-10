@@ -42,19 +42,19 @@ impl ApplicationContext for Application {
             Vertex {
                 position: [-0.5, -0.5, 0.0],
                 tex_coords: [0.0, 0.0],
-            }, // Bottom-left
+            },
             Vertex {
                 position: [0.5, -0.5, 0.0],
                 tex_coords: [1.0, 0.0],
-            }, // Bottom-right
+            },
             Vertex {
                 position: [-0.5, 0.5, 0.0],
                 tex_coords: [0.0, 1.0],
-            }, // Top-left
+            },
             Vertex {
                 position: [0.5, 0.5, 0.0],
                 tex_coords: [1.0, 1.0],
-            }, // Top-right
+            },
         ];
 
         let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
