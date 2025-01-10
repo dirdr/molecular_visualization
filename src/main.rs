@@ -5,24 +5,22 @@ use std::fs;
 
 use glium::{
     glutin::surface::WindowSurface,
+    texture::RawImage2d,
     winit::{
         dpi::PhysicalPosition,
         event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
     },
-    Surface,
+    Surface, Texture2d,
 };
 use molecular_visualization::{
     arcball::ArcballControl,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
-    teapot::{self},
 };
 use nalgebra::{Matrix4, Point3, Vector3};
 
 struct Application {
-    pub vertex_buffer: glium::VertexBuffer<teapot::Vertex>,
-    pub normals_buffer: glium::VertexBuffer<teapot::Normal>,
-    pub index_buffer: glium::IndexBuffer<u16>,
+    pub vertex_buffer: glium::VertexBuffer<Vertex>,
     pub program: glium::Program,
     pub camera: PerspectiveCamera<Ready>,
     pub arcball: ArcballControl,
@@ -33,25 +31,38 @@ struct Application {
 #[derive(Copy, Clone)]
 pub struct Vertex {
     position: [f32; 3],
-    normal: [f32; 3],
-    texture: [f32; 2],
+    tex_coords: [f32; 2],
 }
+
+implement_vertex!(Vertex, position, tex_coords);
 
 impl ApplicationContext for Application {
     fn new(display: &glium::Display<WindowSurface>) -> Self {
-        let positions = glium::VertexBuffer::new(display, &teapot::VERTICES).unwrap();
-        let normals = glium::VertexBuffer::new(display, &teapot::NORMALS).unwrap();
-        let indices = glium::IndexBuffer::new(
-            display,
-            glium::index::PrimitiveType::TrianglesList,
-            &teapot::INDICES,
-        )
-        .unwrap();
+        let vertices = [
+            Vertex {
+                position: [-0.5, -0.5, 0.0],
+                tex_coords: [0.0, 0.0],
+            }, // Bottom-left
+            Vertex {
+                position: [0.5, -0.5, 0.0],
+                tex_coords: [1.0, 0.0],
+            }, // Bottom-right
+            Vertex {
+                position: [-0.5, 0.5, 0.0],
+                tex_coords: [0.0, 1.0],
+            }, // Top-left
+            Vertex {
+                position: [0.5, 0.5, 0.0],
+                tex_coords: [1.0, 1.0],
+            }, // Top-right
+        ];
 
-        let vertex_shader = fs::read_to_string("./resources/shaders/shader.vert")
+        let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
+
+        let vertex_shader = fs::read_to_string("./resources/shaders/billboard.vert")
             .expect("Failed to read Vertex shader");
 
-        let fragment_shader = fs::read_to_string("./resources/shaders/bill_phong.frag")
+        let fragment_shader = fs::read_to_string("./resources/shaders/billboard.frag")
             .expect("Failed to read fragment shader");
 
         let program = program!(display,
@@ -76,9 +87,7 @@ impl ApplicationContext for Application {
         let arcball = ArcballControl::new(width as f32, height as f32);
 
         Self {
-            vertex_buffer: positions,
-            normals_buffer: normals,
-            index_buffer: indices,
+            vertex_buffer,
             program,
             camera,
             arcball,
@@ -132,14 +141,12 @@ impl ApplicationContext for Application {
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
 
-        let light: [f32; 3] = [1.0, 1.0, 1.0];
-
         #[rustfmt::skip]
         let model: Matrix4<f32> = Matrix4::<f32>::from_row_slice(&[
-            0.01, 0.0, 0.0, 0.0,
-            0.0, 0.01, 0.0, 0.0,
-            0.0, 0.0, 0.01, 0.0,
-            0.0, 0.0, 0.0, 1.0f32,
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 1.0, 1.0f32,
         ]);
 
         let rotation = self.arcball.get_rotation_matrix();
@@ -155,11 +162,17 @@ impl ApplicationContext for Application {
         let projection = self.camera.get_projection_matrix(aspect_ratio);
         let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
+        let white_pixel = vec![255u8, 255, 255, 255]; // RGBA for white (255, 255, 255, 255)
+
+        // Create a 1x1 white texture
+        let white_texture =
+            Texture2d::new(display, RawImage2d::from_raw_rgba(white_pixel, (1, 1))).unwrap();
+
         let uniforms = uniform! {
             model: model,
             view: view_array,
             projection: projection_array,
-            u_light: light,
+            u_texture: white_texture,
         };
 
         let params = glium::DrawParameters {
@@ -177,11 +190,13 @@ impl ApplicationContext for Application {
             frame.get_dimensions().1 as f32,
         );
 
+        let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
+
         frame.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
         frame
             .draw(
-                (&self.vertex_buffer, &self.normals_buffer),
-                &self.index_buffer,
+                &self.vertex_buffer,
+                indices,
                 &self.program,
                 &uniforms,
                 &params,
