@@ -150,10 +150,16 @@ impl ApplicationContext for Application {
         ]);
 
         let rotation = self.arcball.get_rotation_matrix();
-        let model: [[f32; 4]; 4] = (rotation * model).into();
 
         let view = self.camera.get_view_matrix();
         let view_array: [[f32; 4]; 4] = view.into();
+
+        // HACK - Applying the arcball rotation relative to the camera.
+        // 1. Move to camera space (view matrix)
+        // 2. Apply rotation
+        // 3. Move back to world space (inverse view matrix)
+        // 4. Apply model transformations
+        let model: [[f32; 4]; 4] = (model * view.try_inverse().unwrap() * rotation * view).into();
 
         let (width, height) = frame.get_dimensions();
         let aspect_ratio = width as f32 / height as f32;
