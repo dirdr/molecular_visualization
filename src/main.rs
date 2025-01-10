@@ -7,7 +7,7 @@ use glium::{
     glutin::surface::WindowSurface,
     winit::{
         dpi::PhysicalPosition,
-        event::{ElementState, WindowEvent},
+        event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
     },
     Surface,
 };
@@ -110,6 +110,17 @@ impl ApplicationContext for Application {
                         }
                     }
                 }
+            }
+            WindowEvent::MouseWheel {
+                delta,
+                phase: TouchPhase::Moved,
+                ..
+            } => {
+                let scroll_amount = match delta {
+                    MouseScrollDelta::LineDelta(_, y) => *y,
+                    MouseScrollDelta::PixelDelta(pos) => pos.y as f32 * 0.1,
+                };
+                self.camera.zoom(scroll_amount);
             }
             WindowEvent::Resized(size) => {
                 self.arcball.resize(size.width as f32, size.height as f32);

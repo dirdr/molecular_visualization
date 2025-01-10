@@ -4,6 +4,7 @@ use nalgebra::{Matrix4, Point3, Vector3};
 
 /// Define a generic camera contract
 pub trait Camera {
+    fn zoom(&mut self, zoom_amount: f32);
     fn get_view_matrix(&self) -> Matrix4<f32>;
     fn get_projection_matrix(&self, aspect_ratio: f32) -> Matrix4<f32>;
 }
@@ -30,8 +31,16 @@ pub struct Ready {
 }
 
 /// Camera that use a perspective projection.
+/// `fov` is in radian.
+/// `fov_min` and `fov_max` hold the minimum and maximum acceptable value for the field of view of
+/// the camera, this is used to clamp the camera zoom.
+/// `state` is acting as a typestate marker for the camera state, while holding the state
+/// information.
 pub struct PerspectiveCamera<S: CameraState> {
     pub fov: f32,
+    pub fov_min: f32,
+    pub fov_max: f32,
+    pub zoom_sensitivity: f32,
     pub znear: f32,
     pub zfar: f32,
     pub state: S,
@@ -41,6 +50,9 @@ impl Default for PerspectiveCamera<Virtual> {
     fn default() -> Self {
         Self {
             fov: 60.0 * (PI / 180.0),
+            fov_min: 20.0 * (PI / 180.0),
+            fov_max: 120.0 * (PI / 180.0),
+            zoom_sensitivity: 0.01,
             znear: 0.1,
             zfar: 1024.0,
             state: Virtual {},
@@ -53,6 +65,9 @@ impl PerspectiveCamera<Virtual> {
         PerspectiveCamera::<Placed> {
             state: Placed { pos },
             fov: self.fov,
+            fov_min: self.fov_min,
+            fov_max: self.fov_max,
+            zoom_sensitivity: self.zoom_sensitivity,
             znear: self.znear,
             zfar: self.zfar,
         }
@@ -62,6 +77,9 @@ impl PerspectiveCamera<Virtual> {
         PerspectiveCamera::<Pointed> {
             state: Pointed { target, up },
             fov: self.fov,
+            fov_min: self.fov_min,
+            fov_max: self.fov_max,
+            zoom_sensitivity: self.zoom_sensitivity,
             znear: self.znear,
             zfar: self.zfar,
         }
@@ -77,6 +95,9 @@ impl PerspectiveCamera<Placed> {
                 pos: self.state.pos,
             },
             fov: self.fov,
+            fov_min: self.fov_min,
+            fov_max: self.fov_max,
+            zoom_sensitivity: self.zoom_sensitivity,
             znear: self.znear,
             zfar: self.zfar,
         }
@@ -92,6 +113,9 @@ impl PerspectiveCamera<Pointed> {
                 up: self.state.up,
             },
             fov: self.fov,
+            fov_min: self.fov_min,
+            fov_max: self.fov_max,
+            zoom_sensitivity: self.zoom_sensitivity,
             znear: self.znear,
             zfar: self.zfar,
         }
@@ -99,6 +123,11 @@ impl PerspectiveCamera<Pointed> {
 }
 
 impl Camera for PerspectiveCamera<Ready> {
+    fn zoom(&mut self, zoom_amount: f32) {
+        self.fov =
+            (self.fov - zoom_amount * self.zoom_sensitivity).clamp(self.fov_min, self.fov_max);
+    }
+
     fn get_view_matrix(&self) -> Matrix4<f32> {
         Matrix4::look_at_rh(&self.state.pos, &self.state.target, &self.state.up)
     }
