@@ -146,7 +146,7 @@ impl ApplicationContext for Application {
             1.0, 0.0, 0.0, 0.0,
             0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 1.0, 1.0f32,
+            0.0, 0.0, 0.0, 1.0f32,
         ]);
 
         let rotation = self.arcball.get_rotation_matrix();
