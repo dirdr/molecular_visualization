@@ -5,13 +5,13 @@ use std::fs;
 
 use glium::{
     glutin::surface::WindowSurface,
-    texture::RawImage2d,
     winit::{
         dpi::PhysicalPosition,
         event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
     },
-    Surface, Texture2d,
+    Surface,
 };
+use image::Rgb;
 use molecular_visualization::{
     arcball::ArcballControl,
     backend::{ApplicationContext, State},
@@ -59,10 +59,10 @@ impl ApplicationContext for Application {
 
         let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
 
-        let vertex_shader = fs::read_to_string("./resources/shaders/billboard.vert")
+        let vertex_shader = fs::read_to_string("./resources/shaders/sphere_imposter.vert")
             .expect("Failed to read Vertex shader");
 
-        let fragment_shader = fs::read_to_string("./resources/shaders/billboard.frag")
+        let fragment_shader = fs::read_to_string("./resources/shaders/sphere_imposter.frag")
             .expect("Failed to read fragment shader");
 
         let program = program!(display,
@@ -154,12 +154,7 @@ impl ApplicationContext for Application {
         let view = self.camera.get_view_matrix();
         let view_array: [[f32; 4]; 4] = view.into();
 
-        // HACK - Applying the arcball rotation relative to the camera.
-        // 1. Move to camera space (view matrix)
-        // 2. Apply rotation
-        // 3. Move back to world space (inverse view matrix)
-        // 4. Apply model transformations
-        let model: [[f32; 4]; 4] = (model * view.try_inverse().unwrap() * rotation * view).into();
+        let model: [[f32; 4]; 4] = (model * rotation).into();
 
         let (width, height) = frame.get_dimensions();
         let aspect_ratio = width as f32 / height as f32;
@@ -168,17 +163,22 @@ impl ApplicationContext for Application {
         let projection = self.camera.get_projection_matrix(aspect_ratio);
         let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
-        let white_pixel = vec![255u8, 255, 255, 255]; // RGBA for white (255, 255, 255, 255)
+        let light: [f32; 3] = Point3::new(1.0, 0.0, 1.0).into();
 
-        // Create a 1x1 white texture
-        let white_texture =
-            Texture2d::new(display, RawImage2d::from_raw_rgba(white_pixel, (1, 1))).unwrap();
+        let sphere_color: Rgb<u8> = Rgb([255, 0, 0]);
+        let sphere_color: [f32; 3] = sphere_color.0.map(|c| c as f32 / 255.0);
+
+        let sphere_radius = 0.5_f32;
+        let camera_position: [f32; 3] = self.camera.get_position().into();
 
         let uniforms = uniform! {
             model: model,
             view: view_array,
             projection: projection_array,
-            u_texture: white_texture,
+            light_position: light,
+            camera_position: camera_position,
+            sphere_color: sphere_color,
+            sphere_radius: sphere_radius,
         };
 
         let params = glium::DrawParameters {
@@ -198,7 +198,7 @@ impl ApplicationContext for Application {
 
         let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
 
-        frame.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
+        frame.clear_color_and_depth((0.95, 0.95, 0.95, 1.0), 1.0);
         frame
             .draw(
                 &self.vertex_buffer,
