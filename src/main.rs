@@ -1,97 +1,74 @@
 #[macro_use]
 extern crate glium;
 
-use std::fs;
-
 use glium::{
     glutin::surface::WindowSurface,
     winit::{
         dpi::PhysicalPosition,
         event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
     },
-    Surface,
+    DrawParameters, Program, Surface,
 };
-use image::Rgb;
 use molecular_visualization::{
     arcball::ArcballControl,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
+    molecule::Molecule,
+    sphere_batch::SphereBatch,
 };
-use nalgebra::{Matrix4, Point3, Vector3};
+use nalgebra::{Point3, Vector3};
 
 struct Application {
-    pub vertex_buffer: glium::VertexBuffer<Vertex>,
-    pub program: glium::Program,
     pub camera: PerspectiveCamera<Ready>,
     pub arcball: ArcballControl,
     pub last_cursor_position: Option<PhysicalPosition<f64>>,
+    pub molecule: Molecule,
+    pub sphere_instances_program: Program,
+    pub draw_params: DrawParameters<'static>,
 }
-
-#[allow(dead_code)]
-#[derive(Copy, Clone)]
-pub struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
-}
-
-implement_vertex!(Vertex, position, tex_coords);
 
 impl ApplicationContext for Application {
+    /// Create a new Application, if one of the operation fails (Related to OpenGL errors), make
+    /// the program panic rather than propagating the Error to the backend.
     fn new(display: &glium::Display<WindowSurface>) -> Self {
-        let vertices = [
-            Vertex {
-                position: [-0.5, -0.5, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
-            Vertex {
-                position: [0.5, -0.5, 0.0],
-                tex_coords: [1.0, 0.0],
-            },
-            Vertex {
-                position: [-0.5, 0.5, 0.0],
-                tex_coords: [0.0, 1.0],
-            },
-            Vertex {
-                position: [0.5, 0.5, 0.0],
-                tex_coords: [1.0, 1.0],
-            },
-        ];
-
-        let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
-
-        let vertex_shader = fs::read_to_string("./resources/shaders/sphere_imposter.vert")
-            .expect("Failed to read Vertex shader");
-
-        let fragment_shader = fs::read_to_string("./resources/shaders/sphere_imposter.frag")
-            .expect("Failed to read fragment shader");
-
-        let program = program!(display,
-            410 => {
-                vertex: &vertex_shader,
-                fragment: &fragment_shader,
-            },
-        )
-        .unwrap();
-
-        let pos = Point3::new(0.0, 0.0, 4.0);
-        let target = Point3::new(0.0, 0.0, 0.0);
-        let up = Vector3::y();
-
-        let camera = PerspectiveCamera::<Virtual> {
-            ..Default::default()
-        }
-        .place(pos)
-        .point(target, up);
-
         let (width, height) = display.get_framebuffer_dimensions();
         let arcball = ArcballControl::new(width as f32, height as f32);
 
+        let camera_pos = Point3::new(0.0, 0.0, 4.0);
+        let camera_target = Point3::new(0.0, 0.0, 0.0);
+        let camera_up = Vector3::y();
+        let camera = PerspectiveCamera::<Virtual> {
+            ..Default::default()
+        }
+        .place(camera_pos)
+        .point(camera_target, camera_up);
+
+        let mut molecule = Molecule::initialize_instances(display)
+            .expect("Molecule have failed to initialize instances");
+
+        molecule
+            .init_molecule(display)
+            .expect("Failed to populate molecule instances");
+
+        let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::DepthTest::IfLess,
+                write: true,
+                ..Default::default()
+            },
+            // TODO enable the backface cullink
+            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
+            ..Default::default()
+        };
+
         Self {
-            vertex_buffer,
-            program,
             camera,
             arcball,
             last_cursor_position: None,
+            molecule,
+            sphere_instances_program: SphereBatch::build_program(display)
+                .expect("Sphere instances program has failed to build"),
+            draw_params: params,
         }
     }
 
@@ -141,20 +118,9 @@ impl ApplicationContext for Application {
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
 
-        #[rustfmt::skip]
-        let model: Matrix4<f32> = Matrix4::<f32>::from_row_slice(&[
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0f32,
-        ]);
-
         let rotation = self.arcball.get_rotation_matrix();
-
         let view = self.camera.get_view_matrix();
         let view_array: [[f32; 4]; 4] = view.into();
-
-        let model: [[f32; 4]; 4] = (model * rotation).into();
 
         let (width, height) = frame.get_dimensions();
         let aspect_ratio = width as f32 / height as f32;
@@ -164,31 +130,13 @@ impl ApplicationContext for Application {
         let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
         let light: [f32; 3] = Point3::new(1.0, 0.0, 1.0).into();
-
-        let sphere_color: Rgb<u8> = Rgb([255, 0, 0]);
-        let sphere_color: [f32; 3] = sphere_color.0.map(|c| c as f32 / 255.0);
-
-        let sphere_radius = 0.5_f32;
         let camera_position: [f32; 3] = self.camera.get_position().into();
 
         let uniforms = uniform! {
-            model: model,
             view: view_array,
             projection: projection_array,
             light_position: light,
             camera_position: camera_position,
-            sphere_color: sphere_color,
-            sphere_radius: sphere_radius,
-        };
-
-        let params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::DepthTest::IfLess,
-                write: true,
-                ..Default::default()
-            },
-            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
-            ..Default::default()
         };
 
         self.arcball.resize(
@@ -196,18 +144,27 @@ impl ApplicationContext for Application {
             frame.get_dimensions().1 as f32,
         );
 
-        let indices = glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip);
+        assert!(self.molecule.sphere_instances.index_buffer.get_size() != 0);
+        assert!(self.molecule.sphere_instances.vertex_buffer.get_size() != 0);
 
         frame.clear_color_and_depth((0.95, 0.95, 0.95, 1.0), 1.0);
         frame
             .draw(
-                &self.vertex_buffer,
-                indices,
-                &self.program,
+                (
+                    &self.molecule.sphere_instances.vertex_buffer,
+                    self.molecule
+                        .sphere_instances
+                        .instance_buffer
+                        .per_instance()
+                        .unwrap(),
+                ),
+                &self.molecule.sphere_instances.index_buffer,
+                &self.sphere_instances_program,
                 &uniforms,
-                &params,
+                &self.draw_params,
             )
-            .unwrap();
+            .expect("Frame draw call have failed");
+
         frame.finish().unwrap();
     }
 
