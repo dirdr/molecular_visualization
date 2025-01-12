@@ -137,6 +137,12 @@ impl Camera for PerspectiveCamera<Ready> {
     }
 }
 
+impl PerspectiveCamera<Ready> {
+    pub fn get_position(&self) -> Point3<f32> {
+        self.state.pos
+    }
+}
+
 impl CameraState for Virtual {}
 impl CameraState for Placed {}
 impl CameraState for Pointed {}
