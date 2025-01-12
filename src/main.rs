@@ -15,6 +15,7 @@ use molecular_visualization::{
     arcball::ArcballControl,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
+    cylinder_batch::CylinderBatch,
     molecule::Molecule,
     sphere_batch::SphereBatch,
 };
@@ -26,7 +27,7 @@ struct Application {
     pub last_cursor_position: Option<PhysicalPosition<f64>>,
     pub molecule: Molecule,
     pub sphere_instances_program: Program,
-    pub draw_params: DrawParameters<'static>,
+    pub cylinder_instance_program: Program,
 }
 
 impl ApplicationContext for Application {
@@ -52,25 +53,15 @@ impl ApplicationContext for Application {
             .init_molecule(display)
             .expect("Failed to populate molecule instances");
 
-        let params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::DepthTest::IfLess,
-                write: true,
-                ..Default::default()
-            },
-            // TODO enable the backface cullink
-            //backface_culling: glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
-            ..Default::default()
-        };
-
         Self {
             camera,
             arcball,
             last_cursor_position: None,
             molecule,
             sphere_instances_program: SphereBatch::build_program(display)
-                .expect("Sphere instances program has failed to build"),
-            draw_params: params,
+                .expect("Sphere shader program has failed to build"),
+            cylinder_instance_program: CylinderBatch::build_program(display)
+                .expect("Cylinder shader program has failed to build"),
         }
     }
 
@@ -138,7 +129,7 @@ impl ApplicationContext for Application {
         let projection = self.camera.get_projection_matrix(aspect_ratio);
         let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
-        let light: [f32; 3] = Point3::new(1.0, 0.0, 1.0).into();
+        let light: [f32; 3] = Point3::new(0.0, 3.0, 2.0).into();
         let camera_position: [f32; 3] = self.camera.get_position().into();
 
         let uniforms = uniform! {
@@ -146,6 +137,7 @@ impl ApplicationContext for Application {
             projection: projection_array,
             light_position: light,
             camera_position: camera_position,
+            debug_billboard: false,
         };
 
         self.arcball.resize(
@@ -156,7 +148,45 @@ impl ApplicationContext for Application {
         assert!(self.molecule.atoms.index_buffer.get_size() != 0);
         assert!(self.molecule.atoms.vertex_buffer.get_size() != 0);
 
+        let sphere_draw_params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                ..Default::default()
+            },
+            stencil: glium::draw_parameters::Stencil {
+                reference_value_clockwise: 1,
+                write_mask_clockwise: 0xFF,
+                fail_operation_clockwise: glium::StencilOperation::Keep,
+                pass_depth_fail_operation_clockwise: glium::StencilOperation::Keep,
+                depth_pass_operation_clockwise: glium::StencilOperation::Replace,
+                test_clockwise: glium::StencilTest::AlwaysPass,
+                ..Default::default()
+            },
+            backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
+            ..Default::default()
+        };
+
+        let cylinder_draw_params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                ..Default::default()
+            },
+            stencil: glium::draw_parameters::Stencil {
+                reference_value_clockwise: 0,
+                test_clockwise: glium::StencilTest::IfEqual { mask: 0xFF },
+                write_mask_clockwise: 0xFF,
+                fail_operation_clockwise: glium::StencilOperation::Keep,
+                pass_depth_fail_operation_clockwise: glium::StencilOperation::Keep,
+                depth_pass_operation_clockwise: glium::StencilOperation::Keep,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
         frame.clear_color_and_depth((0.95, 0.95, 0.95, 1.0), 1.0);
+        frame.clear_stencil(0);
         frame
             .draw(
                 (
@@ -166,7 +196,20 @@ impl ApplicationContext for Application {
                 &self.molecule.atoms.index_buffer,
                 &self.sphere_instances_program,
                 &uniforms,
-                &self.draw_params,
+                &sphere_draw_params,
+            )
+            .expect("Frame draw call have failed");
+
+        frame
+            .draw(
+                (
+                    &self.molecule.bonds.vertex_buffer,
+                    self.molecule.bonds.instance_buffer.per_instance().unwrap(),
+                ),
+                &self.molecule.bonds.index_buffer,
+                &self.cylinder_instance_program,
+                &uniforms,
+                &cylinder_draw_params,
             )
             .expect("Frame draw call have failed");
 

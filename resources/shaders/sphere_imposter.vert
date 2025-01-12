@@ -24,7 +24,7 @@ void main() {
     vec3 camera_up = vec3(view[0][1], view[1][1], view[2][1]);
 
     vec3 world_pos = instance_pos
-            + camera_right * pos.x * instance_radius * 2.0
+            + camera_right * pos.x * instance_radius * 2.0 // *2 the have the needed space in the billboard
             + camera_up * pos.y * instance_radius * 2.0;
 
     v_uv_coordinates = uv_coordinates;

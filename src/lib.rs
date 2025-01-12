@@ -1,6 +1,7 @@
 pub mod arcball;
 pub mod backend;
 pub mod camera;
+pub mod cylinder_batch;
 pub mod geometry;
 pub mod molecule;
 pub mod shader;

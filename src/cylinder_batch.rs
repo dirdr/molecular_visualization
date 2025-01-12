@@ -8,51 +8,51 @@ use nalgebra::{Point3, Point4};
 
 use crate::geometry::quad::{Quad, QuadVertex};
 
-/// This struct hold a instancing imposter sphere batch informations.
-/// `vertex_buffer` hold the quad geometry for the sphere imposter, and `index_buffer` contains the
-/// quad indices describing the quad triangle decomposition, see `Quad` static accessor.
-///
-/// `instance_buffer` contains the **per_instance** data, for each of the sphere imposer.
-pub struct SphereBatch {
-    pub vertex_buffer: VertexBuffer<QuadVertex>,
-    pub index_buffer: IndexBuffer<u16>,
-    pub instance_buffer: VertexBuffer<SphereInstanceData>,
-    pub instances: Vec<SphereInstanceData>,
-}
-
-/// Sphere imposter instance data,
-/// To update the instances in the application, you must call `update_instances` to synchronize the
-/// instancing buffer.
 #[derive(Copy, Clone, Debug)]
-pub struct SphereInstanceData {
-    pub instance_pos: [f32; 3],
+pub struct CylinderInstanceData {
+    pub instance_start_pos: [f32; 3],
+    pub instance_end_pos: [f32; 3],
     pub instance_color: [f32; 4],
     pub instance_radius: f32,
 
-    pub original_pos: Point3<f32>,
+    pub original_start_pos: Point3<f32>,
+    pub original_end_pos: Point3<f32>,
 }
 
-impl SphereInstanceData {
-    pub fn new(pos: Point3<f32>, color: Point4<f32>, radius: f32) -> Self {
-        Self {
-            instance_pos: pos.into(),
-            instance_color: color.into(),
-            instance_radius: radius,
-            original_pos: pos,
-        }
-    }
-}
-
-// Implement the `glium` `Vertex` trait, effectively biding
-// The SphereInstanceData specified fields to the vertex shader.
 implement_vertex!(
-    SphereInstanceData,
-    instance_pos,
+    CylinderInstanceData,
+    instance_start_pos,
+    instance_end_pos,
     instance_color,
     instance_radius
 );
 
-impl SphereBatch {
+pub struct CylinderBatch {
+    pub vertex_buffer: VertexBuffer<QuadVertex>,
+    pub index_buffer: IndexBuffer<u16>,
+    pub instance_buffer: VertexBuffer<CylinderInstanceData>,
+    pub instances: Vec<CylinderInstanceData>,
+}
+
+impl CylinderInstanceData {
+    pub fn new(
+        start_pos: Point3<f32>,
+        end_pos: Point3<f32>,
+        color: Point4<f32>,
+        radius: f32,
+    ) -> Self {
+        Self {
+            instance_start_pos: start_pos.into(),
+            instance_end_pos: end_pos.into(),
+            instance_color: color.into(),
+            instance_radius: radius,
+            original_start_pos: start_pos,
+            original_end_pos: end_pos,
+        }
+    }
+}
+
+impl CylinderBatch {
     pub fn new(display: &glium::Display<WindowSurface>) -> anyhow::Result<Self> {
         let vertices = Quad::get_vertices_vertices();
         let indices = Quad::get_billboard_indices();
@@ -65,15 +65,15 @@ impl SphereBatch {
         })
     }
 
-    pub fn update_instances(&mut self, instances: &[SphereInstanceData]) {
+    pub fn update_instances(&mut self, instances: &[CylinderInstanceData]) {
         self.instances = instances.to_vec();
     }
 
-    pub fn get_instance(&self, index: usize) -> Option<&SphereInstanceData> {
+    pub fn get_instance(&self, index: usize) -> Option<&CylinderInstanceData> {
         self.instances.get(index)
     }
 
-    pub fn get_instance_mut(&mut self, index: usize) -> Option<&mut SphereInstanceData> {
+    pub fn get_instance_mut(&mut self, index: usize) -> Option<&mut CylinderInstanceData> {
         self.instances.get_mut(index)
     }
 
@@ -82,15 +82,17 @@ impl SphereBatch {
         Ok(())
     }
 
-    /// Build the sphere imposter GLSL Program and return it.
+    /// Build the cylinder imposter GLSL Program and return it.
     pub fn build_program(display: &glium::Display<WindowSurface>) -> anyhow::Result<Program> {
-        let vertex_shader = fs::read_to_string("./resources/shaders/sphere_imposter.vert")?;
-        let fragment_shader = fs::read_to_string("./resources/shaders/sphere_imposter.frag")?;
+        let vertex_shader = fs::read_to_string("./resources/shaders/cylinder_imposter.vert")?;
+        let fragment_shader = fs::read_to_string("./resources/shaders/cylinder_imposter.frag")?;
+
         if vertex_shader.is_empty() || fragment_shader.is_empty() {
             return Err(anyhow::format_err!(
                 "Fragment or Vertex shader file are empty"
             ));
         }
+
         let program = program!(display,
             410 => {
                 vertex: &vertex_shader,

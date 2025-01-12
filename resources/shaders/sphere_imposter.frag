@@ -10,6 +10,7 @@ out vec4 frag_color;
 
 uniform vec3 light_position;
 uniform vec3 camera_position;
+uniform bool debug_billboard;
 
 void main() {
     // Convert texture coordinates from [0,1] to [-1,1]
@@ -31,8 +32,17 @@ void main() {
     float c = dot(oc, oc) - v_radius * v_radius;
     float discriminant = b * b - 4.0 * a * c;
 
+    if (discriminant < 0.0) {
+        if (debug_billboard) {
+            frag_color = vec4(1.0, 0.0, 1.0, 1);
+            return;
+        } else {
+            discard;
+        }
+    }
+
     // If no intersection, discard the fragment
-    if (discriminant < 0.0 || length(pos) > 1.0) {
+    if (length(pos) > 1.0) {
         discard;
     }
 
@@ -43,7 +53,6 @@ void main() {
     // Calculate normal at intersection point
     vec3 normal = normalize(intersection - sphere_center);
 
-    // Basic lighting calculation
     vec3 light_dir = normalize(light_position - intersection);
     float diffuse = max(dot(normal, light_dir), 0.0);
 
