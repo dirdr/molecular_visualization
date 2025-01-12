@@ -37,7 +37,7 @@ impl SphereInstanceData {
         Self {
             instance_pos: pos.into(),
             instance_color: color.into(),
-            instance_radius: radius.into(),
+            instance_radius: radius,
             original_pos: pos,
         }
     }
