@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate glium;
 
+use core::f32;
+
 use glium::{
     glutin::surface::WindowSurface,
     winit::{
@@ -14,7 +16,7 @@ use molecular_visualization::{
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     molecule::Molecule,
-    sphere_batch::SphereBatch,
+    sphere_batch::{SphereBatch, SphereInstanceData},
 };
 use nalgebra::{Point3, Vector3};
 
@@ -119,11 +121,18 @@ impl ApplicationContext for Application {
         let mut frame = display.draw();
 
         let rotation = self.arcball.get_rotation_matrix();
+        self.molecule.rotate(rotation);
+
+        self.molecule
+            .sync_buffers(display)
+            .expect("Failed to synchronize the molecule instances buffer");
+
         let view = self.camera.get_view_matrix();
         let view_array: [[f32; 4]; 4] = view.into();
 
         let (width, height) = frame.get_dimensions();
         let aspect_ratio = width as f32 / height as f32;
+
         // HACK - the aspect ratio is passed dynamically at each frame mainly to avoid scaling with
         // a fixed base aspect ratio.
         let projection = self.camera.get_projection_matrix(aspect_ratio);
@@ -144,21 +153,17 @@ impl ApplicationContext for Application {
             frame.get_dimensions().1 as f32,
         );
 
-        assert!(self.molecule.sphere_instances.index_buffer.get_size() != 0);
-        assert!(self.molecule.sphere_instances.vertex_buffer.get_size() != 0);
+        assert!(self.molecule.atoms.index_buffer.get_size() != 0);
+        assert!(self.molecule.atoms.vertex_buffer.get_size() != 0);
 
         frame.clear_color_and_depth((0.95, 0.95, 0.95, 1.0), 1.0);
         frame
             .draw(
                 (
-                    &self.molecule.sphere_instances.vertex_buffer,
-                    self.molecule
-                        .sphere_instances
-                        .instance_buffer
-                        .per_instance()
-                        .unwrap(),
+                    &self.molecule.atoms.vertex_buffer,
+                    self.molecule.atoms.instance_buffer.per_instance().unwrap(),
                 ),
-                &self.molecule.sphere_instances.index_buffer,
+                &self.molecule.atoms.index_buffer,
                 &self.sphere_instances_program,
                 &uniforms,
                 &self.draw_params,

@@ -4,6 +4,7 @@ use glium::{
     glutin::surface::WindowSurface, implement_vertex, index::PrimitiveType, program, IndexBuffer,
     Program, VertexBuffer,
 };
+use nalgebra::{Point3, Point4};
 
 use crate::geometry::quad::{Quad, QuadVertex};
 
@@ -16,17 +17,34 @@ pub struct SphereBatch {
     pub vertex_buffer: VertexBuffer<QuadVertex>,
     pub index_buffer: IndexBuffer<u16>,
     pub instance_buffer: VertexBuffer<SphereInstanceData>,
+    pub instances: Vec<SphereInstanceData>,
 }
 
 /// Sphere imposter instance data,
-/// The instances can have different variant of each of the field in this struct.
+/// To update the instances in the application, you must call `update_instances` to synchronize the
+/// instancing buffer.
 #[derive(Copy, Clone, Debug)]
 pub struct SphereInstanceData {
     pub instance_pos: [f32; 3],
     pub instance_color: [f32; 4],
     pub instance_radius: f32,
+
+    pub original_pos: Point3<f32>,
 }
 
+impl SphereInstanceData {
+    pub fn new(pos: Point3<f32>, color: Point4<f32>, radius: f32) -> Self {
+        Self {
+            instance_pos: pos.into(),
+            instance_color: color.into(),
+            instance_radius: radius.into(),
+            original_pos: pos,
+        }
+    }
+}
+
+// Implement the `glium` `Vertex` trait, effectively biding
+// The SphereInstanceData specified fields to the vertex shader.
 implement_vertex!(
     SphereInstanceData,
     instance_pos,
@@ -43,6 +61,7 @@ impl SphereBatch {
             vertex_buffer: VertexBuffer::new(display, &vertices)?,
             index_buffer: IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices)?,
             instance_buffer: VertexBuffer::empty_dynamic(display, 0)?,
+            instances: Vec::new(),
         })
     }
 
@@ -51,7 +70,21 @@ impl SphereBatch {
         display: &glium::Display<WindowSurface>,
         instances: &[SphereInstanceData],
     ) -> anyhow::Result<()> {
+        self.instances = instances.to_vec();
         self.instance_buffer = VertexBuffer::dynamic(display, instances)?;
+        Ok(())
+    }
+
+    pub fn get_instance(&self, index: usize) -> Option<&SphereInstanceData> {
+        self.instances.get(index)
+    }
+
+    pub fn get_instance_mut(&mut self, index: usize) -> Option<&mut SphereInstanceData> {
+        self.instances.get_mut(index)
+    }
+
+    pub fn sync_buffer(&mut self, display: &glium::Display<WindowSurface>) -> anyhow::Result<()> {
+        self.instance_buffer = VertexBuffer::dynamic(display, &self.instances)?;
         Ok(())
     }
 

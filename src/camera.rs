@@ -50,7 +50,7 @@ impl Default for PerspectiveCamera<Virtual> {
     fn default() -> Self {
         Self {
             fov: 60.0 * (PI / 180.0),
-            fov_min: 20.0 * (PI / 180.0),
+            fov_min: 45.0 * (PI / 180.0),
             fov_max: 120.0 * (PI / 180.0),
             zoom_sensitivity: 0.01,
             znear: 0.1,
