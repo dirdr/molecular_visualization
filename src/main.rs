@@ -19,7 +19,7 @@ use molecular_visualization::{
     molecule::Molecule,
     sphere_batch::SphereBatch,
 };
-use nalgebra::{Point3, Vector3};
+use nalgebra::{Matrix4, Point3, Vector3};
 
 struct Application {
     pub camera: PerspectiveCamera<Ready>,
@@ -132,12 +132,16 @@ impl ApplicationContext for Application {
         let light: [f32; 3] = Point3::new(0.0, 3.0, 2.0).into();
         let camera_position: [f32; 3] = self.camera.get_position().into();
 
+        let scaling_factor = 0.1; // Uniform scaling factor
+        let scene_model: [[f32; 4]; 4] = Matrix4::new_scaling(scaling_factor).into();
+
         let uniforms = uniform! {
             view: view_array,
             projection: projection_array,
             light_position: light,
             camera_position: camera_position,
             debug_billboard: false,
+            scene_model: scene_model
         };
 
         self.arcball.resize(
@@ -184,9 +188,17 @@ impl ApplicationContext for Application {
             },
             ..Default::default()
         };
+        let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::DepthTest::IfLess, // Standard depth test
+                write: true,                    // Write to the depth buffer
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
         frame.clear_color_and_depth((0.95, 0.95, 0.95, 1.0), 1.0);
-        frame.clear_stencil(0);
+        frame.clear_stencil(1);
         frame
             .draw(
                 (
@@ -196,7 +208,7 @@ impl ApplicationContext for Application {
                 &self.molecule.atoms.index_buffer,
                 &self.sphere_instances_program,
                 &uniforms,
-                &sphere_draw_params,
+                &params,
             )
             .expect("Frame draw call have failed");
 
@@ -209,7 +221,7 @@ impl ApplicationContext for Application {
                 &self.molecule.bonds.index_buffer,
                 &self.cylinder_instance_program,
                 &uniforms,
-                &cylinder_draw_params,
+                &params,
             )
             .expect("Frame draw call have failed");
 

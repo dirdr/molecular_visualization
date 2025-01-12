@@ -66,8 +66,11 @@ void main() {
     vec3 reflect_dir = reflect(-light_dir, normal);
     float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
 
-    float ambient = 0.6;
+    float ambient = 0.4;
     vec3 final_color = v_color.rgb * (ambient + diffuse + specular);
+
+    float depth_bias = 0.000;
+    gl_FragDepth = gl_FragCoord.z + depth_bias;
 
     frag_color = vec4(final_color, v_color.a);
 }

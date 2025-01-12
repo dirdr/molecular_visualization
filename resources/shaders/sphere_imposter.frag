@@ -60,7 +60,7 @@ void main() {
     vec3 reflect_dir = reflect(-light_dir, normal);
     float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
 
-    float ambient = 0.1;
+    float ambient = 0.3;
 
     frag_color = v_color * (ambient + diffuse + specular);
 }
