@@ -37,7 +37,7 @@ void main() {
 
     if (discriminant < 0.0) {
         if (debug_billboard) {
-            frag_color = vec4(1.0, 0.0, 1.0, 1);
+            frag_color = vec4(1.0, 0.0, 1.0, 1.0);
             return;
         } else {
             discard;
@@ -56,19 +56,30 @@ void main() {
     // Calculate normal at intersection point
     vec3 normal = normalize(intersection - sphere_center);
 
+    // Light calculations
     vec3 light_dir = normalize(light_position - intersection);
-    float diffuse = max(dot(normal, light_dir), 0.0);
+    float distance_to_light = distance(light_position, intersection); // Use the GLSL distance function
 
+    // Attenuation based on distance
+    float attenuation = 1.0 / (1.0 + 0.09 * distance_to_light + 0.032 * distance_to_light * distance_to_light);
+
+    // Diffuse lighting
+    float diffuse = max(dot(normal, light_dir), 0.0) * attenuation;
+
+    // Specular lighting
     vec3 view_dir = normalize(camera_position - intersection);
     vec3 reflect_dir = reflect(-light_dir, normal);
-    float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
+    float shininess = 16.0; // Lower for broader highlights
+    float specular = pow(max(dot(view_dir, reflect_dir), 0.0), shininess) * attenuation;
 
-    float ambient = 0.3;
+    // Ambient light
+    vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
+    vec3 ambient = ambient_light * 0.3;
 
-    frag_color = v_color * (ambient + diffuse + specular);
+    // Final color
+    frag_color = vec4(v_color.rgb * (ambient + diffuse) + specular, v_color.a);
 
     // Depth calculation
-    // Convert intersection point to clip space
     vec4 clip_space = projection * view * vec4(intersection, 1.0);
     float ndc_depth = clip_space.z / clip_space.w;
     float window_depth = (ndc_depth * 0.5) + 0.5; // Map from [-1,1] to [0,1]

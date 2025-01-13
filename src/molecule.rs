@@ -11,6 +11,7 @@ use pdbtbx::{Atom, Element, PDB};
 use crate::{
     cylinder_batch::{CylinderBatch, CylinderInstanceData},
     sphere_batch::{SphereBatch, SphereInstanceData},
+    ARGS,
 };
 
 /// A molecule that is capable of applying a rotation matrix on the CPU
@@ -55,11 +56,13 @@ impl Molecule {
         Ok(())
     }
 
-    pub fn init_molecule(&mut self, display: &glium::Display<WindowSurface>) -> anyhow::Result<()> {
+    pub fn init_molecule(&mut self) -> anyhow::Result<()> {
         let mut atom_map = HashMap::new();
+        let filename = format!("./resources/pdb/{}", &ARGS.file);
 
-        let pdb = pdbtbx::open("./resources/pdb/glucose.pdb").unwrap().0;
-        let bonds = parse_bonds("./resources/pdb/glucose.pdb").unwrap();
+        let pdb = pdbtbx::open(&filename).unwrap().0;
+
+        let bonds = parse_bonds(&filename)?;
         let molecule_center = Self::calculate_molecule_center(&pdb);
 
         let atom_instances = Self::create_atom_instances(&pdb, &mut atom_map, molecule_center);
@@ -67,20 +70,21 @@ impl Molecule {
 
         self.atoms.update_instances(&atom_instances);
         self.bonds.update_instances(&cylinder_instances);
-        self.sync_buffers(display)?;
+
         Ok(())
     }
 
-    fn create_atom_instances(
-        pdb: &PDB,
-        atom_map: &mut HashMap<usize, Atom>,
+    fn create_atom_instances<'a>(
+        pdb: &'a PDB,
+        atom_map: &mut HashMap<usize, &'a Atom>,
         molecule_center: Point3<f32>,
     ) -> Vec<SphereInstanceData> {
         let mut atom_instances = Vec::new();
 
         for model in pdb.models() {
             for atom in model.atoms() {
-                atom_map.insert(atom.serial_number(), atom.clone());
+                atom_map.insert(atom.serial_number(), atom);
+
                 let position = Point3::new(
                     atom.x() as f32 - molecule_center.x,
                     atom.y() as f32 - molecule_center.y,
@@ -91,33 +95,34 @@ impl Molecule {
                 atom_instances.push(SphereInstanceData::new(position, color, radius));
             }
         }
-
         atom_instances
     }
 
-    fn create_bond_instances(
+    fn create_bond_instances<'a>(
         bonds: &[ConectRecord],
-        atom_map: &HashMap<usize, Atom>,
+        atom_map: &'a HashMap<usize, &'a Atom>,
         molecule_center: Point3<f32>,
     ) -> Vec<CylinderInstanceData> {
         let mut cylinder_instances = vec![];
         let mut already_connected = HashSet::new();
 
         for bond in bonds {
-            let start = atom_map.get(&bond.source_atom);
+            let start = match atom_map.get(&(bond.source_atom)) {
+                Some(atom) => atom,
+                None => continue,
+            };
 
-            if start.is_none() {
-                continue;
-            }
-            let start = start.unwrap();
             for &connected in &bond.bonded_atoms {
-                let end = atom_map.get(&connected);
+                let end = match atom_map.get(&(connected)) {
+                    Some(atom) => atom,
+                    None => continue,
+                };
 
-                if end.is_none() {
+                if already_connected.contains(&(start.serial_number(), end.serial_number()))
+                    || already_connected.contains(&(end.serial_number(), start.serial_number()))
+                {
                     continue;
                 }
-
-                let end = end.unwrap();
 
                 let start_pos = [
                     start.x() as f32 - molecule_center.x,
@@ -130,25 +135,16 @@ impl Molecule {
                     end.z() as f32 - molecule_center.z,
                 ];
 
-                let bond_color = [0.8, 0.8, 0.8, 1.0];
-                let bond_radius = 0.1;
-
-                if already_connected.contains(&(start.serial_number(), end.serial_number()))
-                    || already_connected.contains(&(end.serial_number(), start.serial_number()))
-                {
-                    continue;
-                }
-
                 cylinder_instances.push(CylinderInstanceData {
                     instance_start_pos: start_pos,
                     instance_end_pos: end_pos,
-                    instance_color: bond_color,
-                    instance_radius: bond_radius,
+                    instance_color: [0.8, 0.8, 0.8, 1.0],
+                    instance_radius: 0.15,
                 });
+
                 already_connected.insert((start.serial_number(), end.serial_number()));
             }
         }
-
         cylinder_instances
     }
 

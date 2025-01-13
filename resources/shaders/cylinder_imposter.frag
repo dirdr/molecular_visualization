@@ -1,4 +1,5 @@
 #version 410 core
+
 in vec2 v_uv_coordinates;
 in vec3 v_world_pos;
 in vec3 v_start;
@@ -25,18 +26,17 @@ void main() {
 
     // Calculate cylinder intersection
     vec3 oc = ray_origin - v_start;
-    float a = dot(ray_dir - dot(ray_dir, cylinder_dir) * cylinder_dir,
-            ray_dir - dot(ray_dir, cylinder_dir) * cylinder_dir);
-    float b = 2.0 * dot(ray_dir - dot(ray_dir, cylinder_dir) * cylinder_dir,
-                oc - dot(oc, cylinder_dir) * cylinder_dir);
-    float c = dot(oc - dot(oc, cylinder_dir) * cylinder_dir,
-            oc - dot(oc, cylinder_dir) * cylinder_dir) - v_radius * v_radius;
+    vec3 ray_proj = ray_dir - dot(ray_dir, cylinder_dir) * cylinder_dir;
+    vec3 oc_proj = oc - dot(oc, cylinder_dir) * cylinder_dir;
+    float a = dot(ray_proj, ray_proj);
+    float b = 2.0 * dot(ray_proj, oc_proj);
+    float c = dot(oc_proj, oc_proj) - v_radius * v_radius;
 
     float discriminant = b * b - 4.0 * a * c;
 
     if (discriminant < 0.0) {
         if (debug_billboard) {
-            frag_color = vec4(1.0, 0.0, 1.0, 1);
+            frag_color = vec4(1.0, 0.0, 1.0, 1.0);
             return;
         } else {
             discard;
@@ -52,27 +52,34 @@ void main() {
         discard;
     }
 
-    float length = distance(v_end, v_start);
-    t = clamp(t, 0.0, length);
-
     // Closest point on the cylinder axis
-    vec3 closest_point = v_start + t * cylinder_dir;
+    vec3 closest_point = v_start + dot(intersection - v_start, cylinder_dir) * cylinder_dir;
 
     // Normal is the normalized vector from the closest point to the intersection point
     vec3 normal = normalize(intersection - closest_point);
 
+    // Lighting calculations
     vec3 light_dir = normalize(light_position - intersection);
-    float diffuse = max(dot(normal, light_dir), 0.0);
+    float distance_to_light = distance(light_position, intersection);
+    float attenuation = 1.0 / (1.0 + 0.09 * distance_to_light + 0.032 * distance_to_light * distance_to_light);
 
+    // Diffuse lighting
+    float diffuse = max(dot(normal, light_dir), 0.0) * attenuation;
+
+    // Specular lighting
     vec3 view_dir = normalize(camera_position - intersection);
     vec3 reflect_dir = reflect(-light_dir, normal);
-    float specular = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
+    float shininess = 32.0; // Higher value for sharper highlights
+    float specular = pow(max(dot(view_dir, reflect_dir), 0.0), shininess) * attenuation;
 
-    float ambient = 0.4;
-    vec3 final_color = v_color.rgb * (ambient + diffuse + specular);
+    // Ambient lighting
+    vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
+    vec3 ambient = ambient_light * 0.3;
+
+    // Combine lighting components
+    vec3 final_color = v_color.rgb * (ambient + diffuse) + specular;
 
     // Calculate depth in view space
-    // Convert world position to clip space to get correct depth
     vec4 clip_space = projection * view * vec4(intersection, 1.0);
     float ndc_depth = clip_space.z / clip_space.w;
     float window_depth = (ndc_depth * 0.5) + 0.5; // Map from [-1,1] to [0,1]

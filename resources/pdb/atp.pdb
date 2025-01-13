@@ -1,0 +1,64 @@
+ATOM      1  C1' ATP A   1      -0.982  -1.516   0.000  1.00  0.00           C  
+ATOM      2  C2' ATP A   1      -2.267  -1.126   0.000  1.00  0.00           C  
+ATOM      3  C3' ATP A   1      -2.705   0.147   0.000  1.00  0.00           C  
+ATOM      4  C4' ATP A   1      -1.778   1.145   0.000  1.00  0.00           C  
+ATOM      5  C5' ATP A   1      -0.391   0.888   0.000  1.00  0.00           C  
+ATOM      6  O2' ATP A   1      -3.012  -1.916   0.000  1.00  0.00           O  
+ATOM      7  O3' ATP A   1      -4.050   0.373   0.000  1.00  0.00           O  
+ATOM      8  O4' ATP A   1      -2.216   2.437   0.000  1.00  0.00           O  
+ATOM      9  O5' ATP A   1       0.373   2.026   0.000  1.00  0.00           O  
+ATOM     10  PA  ATP A   1       1.969   2.026   0.000  1.00  0.00           P  
+ATOM     11  O1A ATP A   1       2.469   3.426   0.000  1.00  0.00           O  
+ATOM     12  O2A ATP A   1       2.469   1.326   1.215  1.00  0.00           O  
+ATOM     13  O3A ATP A   1       2.469   1.326  -1.215  1.00  0.00           O  
+ATOM     14  PB  ATP A   1       4.065   1.326  -1.215  1.00  0.00           P  
+ATOM     15  O1B ATP A   1       4.565   2.726  -1.215  1.00  0.00           O  
+ATOM     16  O2B ATP A   1       4.565   0.626   0.000  1.00  0.00           O  
+ATOM     17  O3B ATP A   1       4.565   0.626  -2.430  1.00  0.00           O  
+ATOM     18  PG  ATP A   1       6.161   0.626  -2.430  1.00  0.00           P  
+ATOM     19  O1G ATP A   1       6.661   2.026  -2.430  1.00  0.00           O  
+ATOM     20  O2G ATP A   1       6.661  -0.074  -1.215  1.00  0.00           O  
+ATOM     21  O3G ATP A   1       6.661  -0.074  -3.645  1.00  0.00           O  
+ATOM     22  N1  ATP A   1       0.000  -0.466   0.000  1.00  0.00           N  
+ATOM     23  C2  ATP A   1       1.315  -0.771   0.000  1.00  0.00           C  
+ATOM     24  N3  ATP A   1       1.614  -2.098   0.000  1.00  0.00           N  
+ATOM     25  C4  ATP A   1       0.504  -2.997   0.000  1.00  0.00           C  
+ATOM     26  C5  ATP A   1      -0.804  -2.510   0.000  1.00  0.00           C  
+ATOM     27  C6  ATP A   1      -1.804   2.510   0.000  1.00  0.00           C  
+ATOM     28  N6  ATP A   1      -3.012   3.300   0.000  1.00  0.00           N  
+ATOM     29  N7  ATP A   1      -1.778   1.145   0.000  1.00  0.00           N  
+ATOM     30  C8  ATP A   1      -0.391   0.888   0.000  1.00  0.00           C  
+ATOM     31  N9  ATP A   1       0.000  -0.466   0.000  1.00  0.00           N  
+TER      32      ATP A   1
+CONECT    1    2   22   31
+CONECT    2    1    3    6
+CONECT    3    2    4    7
+CONECT    4    3    5    8
+CONECT    5    4    9   30
+CONECT    6    2
+CONECT    7    3
+CONECT    8    4
+CONECT    9    5   10
+CONECT   10    9   11   12   13
+CONECT   11   10
+CONECT   12   10
+CONECT   13   10   14
+CONECT   14   13   15   16   17
+CONECT   15   14
+CONECT   16   14
+CONECT   17   14   18
+CONECT   18   17   19   20   21
+CONECT   19   18
+CONECT   20   18
+CONECT   21   18
+CONECT   22    1   23   26
+CONECT   23   22   24
+CONECT   24   23   25
+CONECT   25   24   26
+CONECT   26   22   25
+CONECT   27   28   29
+CONECT   28   27
+CONECT   29   27   30
+CONECT   30    5   29   31
+CONECT   31    1   30
+END

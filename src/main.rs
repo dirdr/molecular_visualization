@@ -2,7 +2,9 @@
 extern crate glium;
 
 use core::f32;
+use std::fmt::Arguments;
 
+use clap::Parser;
 use glium::{
     glutin::surface::WindowSurface,
     winit::{
@@ -13,6 +15,7 @@ use glium::{
 };
 use molecular_visualization::{
     arcball::ArcballControl,
+    args::Args,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
@@ -20,6 +23,7 @@ use molecular_visualization::{
     sphere_batch::SphereBatch,
 };
 use nalgebra::{Matrix4, Point3, Vector3};
+use once_cell::sync::Lazy;
 
 struct Application {
     pub camera: PerspectiveCamera<Ready>,
@@ -50,8 +54,12 @@ impl ApplicationContext for Application {
             .expect("Molecule have failed to initialize instances");
 
         molecule
-            .init_molecule(display)
+            .init_molecule()
             .expect("Failed to populate molecule instances");
+
+        molecule
+            .sync_buffers(display)
+            .expect("Failed to synchronize the molecule vertex buffer");
 
         Self {
             camera,
@@ -132,7 +140,7 @@ impl ApplicationContext for Application {
         let projection = self.camera.get_projection_matrix(aspect_ratio);
         let projection_array: [[f32; 4]; 4] = *projection.as_ref();
 
-        let light: [f32; 3] = Point3::new(0.0, 3.0, 2.0).into();
+        let light: [f32; 3] = Point3::new(0.0, 1.0, 0.0).into();
         let camera_position: [f32; 3] = self.camera.get_position().into();
 
         let molecule_model: [[f32; 4]; 4] = self.molecule.model_matrix().into();
