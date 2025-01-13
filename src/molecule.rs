@@ -1,13 +1,12 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs::File,
-    hash::Hash,
     io::{BufRead, BufReader},
 };
 
 use glium::glutin::surface::WindowSurface;
-use nalgebra::{Matrix4, Point3, Point4, Vector3};
-use pdbtbx::{Atom, Bond, Element, PDB};
+use nalgebra::{Matrix4, Point3, Point4};
+use pdbtbx::{Atom, Element};
 
 use crate::{
     cylinder_batch::{CylinderBatch, CylinderInstanceData},
@@ -57,12 +56,13 @@ impl Molecule {
     }
 
     pub fn init_molecule(&mut self, display: &glium::Display<WindowSurface>) -> anyhow::Result<()> {
-        let mut pdb = pdbtbx::open("./resources/pdb/c2h5oh.pdb").unwrap().0;
+        let pdb = pdbtbx::open("./resources/pdb/glucose.pdb").unwrap().0;
         let mut atom_instances = Vec::new();
+        let mut atom_map = HashMap::new();
 
         for model in pdb.models() {
-            println!("{:?}", model);
             for atom in model.atoms() {
+                atom_map.insert(atom.serial_number(), atom);
                 let position = Point3::new(atom.x() as f32, atom.y() as f32, atom.z() as f32);
                 let color = Self::atom_color(atom);
                 let radius = Self::atom_size(atom);
@@ -70,28 +70,35 @@ impl Molecule {
             }
         }
 
-        let bonds = parse_bonds("./resources/pdb/c2h5oh.pdb")?;
+        let bonds = parse_bonds("./resources/pdb/glucose.pdb")?;
         let mut bond_instances = vec![];
         let mut already_connected = HashSet::new();
 
         for bond in bonds {
-            println!(
-                "Atom : {:?}, connecté aux atomes : {:?}",
-                bond.source_atom, bond.bonded_atoms,
-            );
-            let start = pdb.atom(bond.source_atom);
+            let start = atom_map.get(&bond.source_atom);
+
             if start.is_none() {
                 continue;
             }
             let start = start.unwrap();
             for connected in bond.bonded_atoms {
-                let end = pdb.atom(connected);
+                println!(
+                    "Serial from scratch : {} connecté a serial from scratch {}",
+                    bond.source_atom, connected
+                );
+                let end = atom_map.get(&connected);
 
                 if end.is_none() {
                     continue;
                 }
 
                 let end = end.unwrap();
+                println!(
+                    "Connection entre : Atom serial : {} et || Atom serial : {}, {:?}",
+                    start.serial_number(),
+                    end.serial_number(),
+                    end
+                );
 
                 let start_pos = [start.x() as f32, start.y() as f32, start.z() as f32];
                 let end_pos = [end.x() as f32, end.y() as f32, end.z() as f32];
@@ -112,6 +119,7 @@ impl Molecule {
                     instance_radius: bond_radius,
                 });
                 already_connected.insert((start.serial_number(), end.serial_number()));
+                println!("");
             }
         }
         self.atoms.update_instances(&atom_instances);

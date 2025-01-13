@@ -1,0 +1,24 @@
+ATOM      1  C1  PRP A   1       0.000   0.000   0.000  1.00  0.00           C  
+ATOM      2  C2  PRP A   1       1.528   0.000   0.000  1.00  0.00           C  
+ATOM      3  C3  PRP A   1       2.100   1.419   0.000  1.00  0.00           C  
+ATOM      4  H1  PRP A   1      -0.366  -0.509   0.890  1.00  0.00           H  
+ATOM      5  H2  PRP A   1      -0.366  -0.509  -0.890  1.00  0.00           H  
+ATOM      6  H3  PRP A   1      -0.366   1.019   0.000  1.00  0.00           H  
+ATOM      7  H4  PRP A   1       1.894  -0.509  -0.890  1.00  0.00           H  
+ATOM      8  H5  PRP A   1       1.894  -0.509   0.890  1.00  0.00           H  
+ATOM      9  H6  PRP A   1       3.190   1.419   0.000  1.00  0.00           H  
+ATOM     10  H7  PRP A   1       1.734   1.928   0.890  1.00  0.00           H  
+ATOM     11  H8  PRP A   1       1.734   1.928  -0.890  1.00  0.00           H  
+TER      12      PRP A   1
+CONECT    1    2    4    5    6
+CONECT    2    1    3    7    8
+CONECT    3    2    9   10   11
+CONECT    4    1
+CONECT    5    1
+CONECT    6    1
+CONECT    7    2
+CONECT    8    2
+CONECT    9    3
+CONECT   10    3
+CONECT   11    3
+END

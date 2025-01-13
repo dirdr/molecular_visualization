@@ -34,7 +34,6 @@ void main() {
             + camera_right * pos.x * scaled_radius * 2.0
             + camera_up * pos.y * scaled_radius * 2.0;
 
-    // Pass data to the fragment shader
     v_uv_coordinates = uv_coordinates;
     v_world_pos = world_pos;
     v_center = transformed_instance_pos;
