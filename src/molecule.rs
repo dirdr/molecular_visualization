@@ -6,7 +6,7 @@ use std::{
 
 use glium::glutin::surface::WindowSurface;
 use nalgebra::{Matrix4, Point3, Point4};
-use pdbtbx::{Atom, Element};
+use pdbtbx::{Atom, Element, PDB};
 
 use crate::{
     cylinder_batch::{CylinderBatch, CylinderInstanceData},
@@ -56,22 +56,51 @@ impl Molecule {
     }
 
     pub fn init_molecule(&mut self, display: &glium::Display<WindowSurface>) -> anyhow::Result<()> {
-        let pdb = pdbtbx::open("./resources/pdb/glucose.pdb").unwrap().0;
-        let mut atom_instances = Vec::new();
         let mut atom_map = HashMap::new();
+
+        let pdb = pdbtbx::open("./resources/pdb/glucose.pdb").unwrap().0;
+        let bonds = parse_bonds("./resources/pdb/glucose.pdb").unwrap();
+        let molecule_center = Self::calculate_molecule_center(&pdb);
+
+        let atom_instances = Self::create_atom_instances(&pdb, &mut atom_map, molecule_center);
+        let cylinder_instances = Self::create_bond_instances(&bonds, &atom_map, molecule_center);
+
+        self.atoms.update_instances(&atom_instances);
+        self.bonds.update_instances(&cylinder_instances);
+        self.sync_buffers(display)?;
+        Ok(())
+    }
+
+    fn create_atom_instances(
+        pdb: &PDB,
+        atom_map: &mut HashMap<usize, Atom>,
+        molecule_center: Point3<f32>,
+    ) -> Vec<SphereInstanceData> {
+        let mut atom_instances = Vec::new();
 
         for model in pdb.models() {
             for atom in model.atoms() {
-                atom_map.insert(atom.serial_number(), atom);
-                let position = Point3::new(atom.x() as f32, atom.y() as f32, atom.z() as f32);
+                atom_map.insert(atom.serial_number(), atom.clone());
+                let position = Point3::new(
+                    atom.x() as f32 - molecule_center.x,
+                    atom.y() as f32 - molecule_center.y,
+                    atom.z() as f32 - molecule_center.z,
+                );
                 let color = Self::atom_color(atom);
                 let radius = Self::atom_size(atom);
                 atom_instances.push(SphereInstanceData::new(position, color, radius));
             }
         }
 
-        let bonds = parse_bonds("./resources/pdb/glucose.pdb")?;
-        let mut bond_instances = vec![];
+        atom_instances
+    }
+
+    fn create_bond_instances(
+        bonds: &[ConectRecord],
+        atom_map: &HashMap<usize, Atom>,
+        molecule_center: Point3<f32>,
+    ) -> Vec<CylinderInstanceData> {
+        let mut cylinder_instances = vec![];
         let mut already_connected = HashSet::new();
 
         for bond in bonds {
@@ -81,11 +110,7 @@ impl Molecule {
                 continue;
             }
             let start = start.unwrap();
-            for connected in bond.bonded_atoms {
-                println!(
-                    "Serial from scratch : {} connecté a serial from scratch {}",
-                    bond.source_atom, connected
-                );
+            for &connected in &bond.bonded_atoms {
                 let end = atom_map.get(&connected);
 
                 if end.is_none() {
@@ -93,15 +118,17 @@ impl Molecule {
                 }
 
                 let end = end.unwrap();
-                println!(
-                    "Connection entre : Atom serial : {} et || Atom serial : {}, {:?}",
-                    start.serial_number(),
-                    end.serial_number(),
-                    end
-                );
 
-                let start_pos = [start.x() as f32, start.y() as f32, start.z() as f32];
-                let end_pos = [end.x() as f32, end.y() as f32, end.z() as f32];
+                let start_pos = [
+                    start.x() as f32 - molecule_center.x,
+                    start.y() as f32 - molecule_center.y,
+                    start.z() as f32 - molecule_center.z,
+                ];
+                let end_pos = [
+                    end.x() as f32 - molecule_center.x,
+                    end.y() as f32 - molecule_center.y,
+                    end.z() as f32 - molecule_center.z,
+                ];
 
                 let bond_color = [0.8, 0.8, 0.8, 1.0];
                 let bond_radius = 0.1;
@@ -112,20 +139,17 @@ impl Molecule {
                     continue;
                 }
 
-                bond_instances.push(CylinderInstanceData {
+                cylinder_instances.push(CylinderInstanceData {
                     instance_start_pos: start_pos,
                     instance_end_pos: end_pos,
                     instance_color: bond_color,
                     instance_radius: bond_radius,
                 });
                 already_connected.insert((start.serial_number(), end.serial_number()));
-                println!("");
             }
         }
-        self.atoms.update_instances(&atom_instances);
-        self.bonds.update_instances(&bond_instances);
-        self.sync_buffers(display)?;
-        Ok(())
+
+        cylinder_instances
     }
 
     /// Take a reference to a `Atom` and return a normalized RGBA color
@@ -197,6 +221,32 @@ impl Molecule {
 
         cpk_radii as f32 * scale
     }
+
+    pub fn calculate_molecule_center(pdb: &PDB) -> Point3<f32> {
+        let mut total_x = 0.0;
+        let mut total_y = 0.0;
+        let mut total_z = 0.0;
+        let mut atom_count = 0;
+
+        for model in pdb.models() {
+            for atom in model.atoms() {
+                total_x += atom.x() as f32;
+                total_y += atom.y() as f32;
+                total_z += atom.z() as f32;
+                atom_count += 1;
+            }
+        }
+
+        if atom_count > 0 {
+            return Point3::new(
+                total_x / atom_count as f32,
+                total_y / atom_count as f32,
+                total_z / atom_count as f32,
+            );
+        }
+
+        Point3::origin()
+    }
 }
 
 impl Rotate for Molecule {
@@ -230,7 +280,7 @@ impl Model for Molecule {
 }
 
 /// Represents a CONECT record from a PDB file
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ConectRecord {
     source_atom: usize,
     bonded_atoms: Vec<usize>,

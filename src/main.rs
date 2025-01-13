@@ -16,7 +16,7 @@ use molecular_visualization::{
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
-    molecule::{Model, Molecule, Rotate, Scale},
+    molecule::{Model, Molecule, Rotate, Scale, Translate},
     sphere_batch::SphereBatch,
 };
 use nalgebra::{Matrix4, Point3, Vector3};
