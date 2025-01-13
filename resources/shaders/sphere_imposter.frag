@@ -12,6 +12,7 @@ out vec4 frag_color;
 uniform vec3 light_position;
 uniform vec3 camera_position;
 uniform bool debug_billboard;
+uniform bool u_show_silhouette; // Added uniform for silhouette control
 uniform mat4 projection;
 uniform mat4 view;
 
@@ -58,7 +59,7 @@ void main() {
 
     // Light calculations
     vec3 light_dir = normalize(light_position - intersection);
-    float distance_to_light = distance(light_position, intersection); // Use the GLSL distance function
+    float distance_to_light = distance(light_position, intersection);
 
     // Attenuation based on distance
     float attenuation = 1.0 / (1.0 + 0.09 * distance_to_light + 0.032 * distance_to_light * distance_to_light);
@@ -76,8 +77,21 @@ void main() {
     vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
     vec3 ambient = ambient_light * 0.3;
 
-    // Final color
-    frag_color = vec4(v_color.rgb * (ambient + diffuse) + specular, v_color.a);
+    // Final color before silhouette
+    vec3 final_color = v_color.rgb * (ambient + diffuse) + specular;
+
+    // Silhouette parameters
+    const float SILHOUETTE_THRESHOLD = 0.4;
+    const vec3 SILHOUETTE_COLOR = vec3(0.0, 0.0, 0.0); // Black silhouette
+
+    // Compute the silhouette factor
+    float ndotl = dot(normal, view_dir);
+    float silhouette_factor = smoothstep(SILHOUETTE_THRESHOLD, SILHOUETTE_THRESHOLD + 0.1, abs(ndotl));
+
+    // Apply silhouette if enabled
+    if (u_show_silhouette && silhouette_factor < 1.0) {
+        final_color = mix(SILHOUETTE_COLOR, final_color, silhouette_factor);
+    }
 
     // Depth calculation
     vec4 clip_space = projection * view * vec4(intersection, 1.0);
@@ -87,4 +101,6 @@ void main() {
     // Apply a small depth bias to prevent z-fighting
     float depth_bias = 0.0001;
     gl_FragDepth = window_depth + depth_bias;
+
+    frag_color = vec4(final_color, v_color.a);
 }

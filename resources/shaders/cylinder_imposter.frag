@@ -15,6 +15,9 @@ uniform bool debug_billboard;
 uniform mat4 projection;
 uniform mat4 view;
 
+// New uniform for silhouette control
+uniform bool u_show_silhouette;
+
 void main() {
     // Ray-cylinder intersection
     vec3 ray_origin = camera_position;
@@ -78,6 +81,20 @@ void main() {
 
     // Combine lighting components
     vec3 final_color = v_color.rgb * (ambient + diffuse) + specular;
+
+    // Silhouette parameters
+    const float SILHOUETTE_THRESHOLD = 0.4;
+    const vec3 SILHOUETTE_COLOR = vec3(0.0, 0.0, 0.0); // Black silhouette
+
+    // Compute the silhouette factor
+    float ndotl = dot(normal, view_dir);
+    float silhouette_factor = smoothstep(SILHOUETTE_THRESHOLD, SILHOUETTE_THRESHOLD + 0.1, abs(ndotl));
+
+    // Apply silhouette if enabled
+    if (u_show_silhouette && silhouette_factor < 1.0) {
+        //final_color = mix(SILHOUETTE_COLOR, final_color, silhouette_factor);
+        final_color = SILHOUETTE_COLOR;
+    }
 
     // Calculate depth in view space
     vec4 clip_space = projection * view * vec4(intersection, 1.0);
