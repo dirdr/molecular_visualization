@@ -119,7 +119,8 @@ impl ApplicationContext for Application {
         let mut frame = display.draw();
         self.molecule.reset_model_matrix();
 
-        self.molecule.scale(Matrix4::new_scaling(0.5));
+        self.molecule
+            .scale(Matrix4::new_scaling(self.molecule.scale_factor));
 
         let rotation = self.arcball.get_rotation_matrix();
         self.molecule.rotate(rotation);

@@ -40,6 +40,7 @@ pub struct Molecule {
     pub bonds: CylinderBatch,
     model_matrix: Matrix4<f32>,
     pub show_silhouette: bool,
+    pub scale_factor: f32,
 }
 
 impl Molecule {
@@ -49,6 +50,7 @@ impl Molecule {
             bonds: CylinderBatch::new(display)?,
             model_matrix: Matrix4::<f32>::identity(),
             show_silhouette: false,
+            scale_factor: 1.0,
         })
     }
 
@@ -66,6 +68,34 @@ impl Molecule {
 
         let bonds = parse_bonds(&filename)?;
         let molecule_center = Self::calculate_molecule_center(&pdb);
+        let bounding_box = pdb.bounding_box();
+        let bottom_left = Point3::<f32>::new(
+            bounding_box.0 .0 as f32,
+            bounding_box.0 .1 as f32,
+            bounding_box.0 .2 as f32,
+        );
+
+        let top_right = Point3::<f32>::new(
+            bounding_box.1 .0 as f32,
+            bounding_box.1 .1 as f32,
+            bounding_box.1 .2 as f32,
+        );
+
+        let dimension = top_right - bottom_left;
+        // Get maximum dimension
+        let max_dimension = dimension.x.max(dimension.y).max(dimension.z);
+
+        // Define your target size (how big you want the molecule to appear in your scene)
+        let target_size = 5.0; // Adjust this value based on your needs
+
+        // Calculate scale factor
+        let scale_factor = if max_dimension > target_size {
+            target_size / max_dimension
+        } else {
+            1.0 // Don't scale up if molecule is smaller than target
+        };
+
+        self.scale_factor = scale_factor;
 
         let atom_instances = Self::create_atom_instances(&pdb, &mut atom_map, molecule_center);
         let cylinder_instances = Self::create_bond_instances(&bonds, &atom_map, molecule_center);
@@ -159,31 +189,39 @@ impl Molecule {
     /// according to the CPK coloring.
     fn atom_color(atom: &Atom) -> Point4<f32> {
         match atom.element().unwrap() {
-            Element::H => Point4::new(1.0, 1.0, 1.0, 1.0),
-            Element::C => Point4::new(0.2, 0.2, 0.2, 1.0),
-            Element::N => Point4::new(0.0, 0.0, 1.0, 1.0),
-            Element::O => Point4::new(1.0, 0.0, 0.0, 1.0),
-            Element::F | Element::Cl => Point4::new(0.0, 1.0, 0.0, 1.0),
-            Element::Br => Point4::new(0.6, 0.0, 0.0, 1.0),
-            Element::I => Point4::new(0.5, 0.0, 0.5, 1.0),
-            Element::He | Element::Ne | Element::Ar | Element::Kr | Element::Xe | Element::Rn => {
-                Point4::new(0.0, 1.0, 1.0, 1.0)
-            }
-            Element::P => Point4::new(1.0, 0.5, 0.0, 1.0),
-            Element::S => Point4::new(1.0, 1.0, 0.0, 1.0),
-            Element::B => Point4::new(0.9, 0.8, 0.6, 1.0),
-            Element::Li | Element::Na | Element::K | Element::Rb | Element::Cs | Element::Fr => {
-                Point4::new(0.5, 0.0, 0.5, 1.0)
-            }
-            Element::Be | Element::Mg | Element::Ca | Element::Sr | Element::Ba | Element::Ra => {
-                Point4::new(0.0, 0.5, 0.0, 1.0)
-            }
-            Element::Ti => Point4::new(0.5, 0.5, 0.5, 1.0),
-            Element::Fe => Point4::new(0.8, 0.4, 0.0, 1.0),
-            _ => Point4::new(1.0, 0.5, 0.8, 1.0),
+            Element::H => Point4::new(1.0, 1.0, 1.0, 1.0), // 255/255
+            Element::He => Point4::new(0.851, 1.0, 1.0, 1.0), // 217/255
+            Element::Li => Point4::new(0.8, 0.502, 1.0, 1.0), // 204/255, 128/255
+            Element::Be => Point4::new(0.761, 1.0, 0.0, 1.0), // 194/255
+            Element::B => Point4::new(1.0, 0.710, 0.710, 1.0), // 181/255
+            Element::C => Point4::new(0.565, 0.565, 0.565, 1.0), // 144/255
+            Element::N => Point4::new(0.188, 0.314, 0.973, 1.0), // 48/255, 80/255, 248/255
+            Element::O => Point4::new(1.0, 0.051, 0.051, 1.0), // 13/255
+            Element::F => Point4::new(0.565, 0.878, 0.314, 1.0), // 144/255, 224/255, 80/255
+            Element::Ne => Point4::new(0.702, 0.890, 0.961, 1.0), // 179/255, 227/255, 245/255
+            Element::Na => Point4::new(0.671, 0.361, 0.949, 1.0), // 171/255, 92/255, 242/255
+            Element::Mg => Point4::new(0.541, 1.0, 0.0, 1.0), // 138/255
+            Element::Al => Point4::new(0.749, 0.651, 0.651, 1.0), // 191/255, 166/255
+            Element::Si => Point4::new(0.941, 0.784, 0.627, 1.0), // 240/255, 200/255, 160/255
+            Element::P => Point4::new(1.0, 0.502, 0.0, 1.0), // 128/255
+            Element::S => Point4::new(1.0, 1.0, 0.188, 1.0), // 48/255
+            Element::Cl => Point4::new(0.122, 0.941, 0.122, 1.0), // 31/255, 240/255
+            Element::Ar => Point4::new(0.502, 0.820, 0.890, 1.0), // 128/255, 209/255, 227/255
+            Element::K => Point4::new(0.561, 0.251, 0.831, 1.0), // 143/255, 64/255, 212/255
+            Element::Ca => Point4::new(0.239, 1.0, 0.0, 1.0), // 61/255
+            Element::Fe => Point4::new(0.878, 0.400, 0.200, 1.0), // 224/255, 102/255, 51/255
+            Element::Cu => Point4::new(0.784, 0.502, 0.200, 1.0), // 200/255, 128/255, 51/255
+            Element::Zn => Point4::new(0.490, 0.502, 0.690, 1.0), // 125/255, 128/255, 176/255
+            Element::Br => Point4::new(0.651, 0.161, 0.161, 1.0), // 166/255, 41/255
+            Element::Ag => Point4::new(0.753, 0.753, 0.753, 1.0), // 192/255
+            Element::I => Point4::new(0.580, 0.0, 0.580, 1.0), // 148/255
+            Element::Au => Point4::new(1.0, 0.820, 0.137, 1.0), // 255/255, 209/255, 35/255
+            Element::Pb => Point4::new(0.341, 0.349, 0.380, 1.0), // 87/255, 89/255, 97/255
+            Element::U => Point4::new(0.0, 0.561, 1.0, 1.0), // 0, 143/255, 255/255
+            // Default for other elements
+            _ => Point4::new(1.0, 0.078, 0.576, 1.0), // 255/255, 20/255, 147/255 (pink)
         }
     }
-
     /// Assign a normalized atomic size based on the CPK radii.
     /// The sizes are scaled to fit OpenGL rendering.
     fn atom_size(atom: &Atom) -> f32 {
