@@ -2,28 +2,25 @@
 extern crate glium;
 
 use core::f32;
-use std::fmt::Arguments;
 
-use clap::Parser;
 use glium::{
     glutin::surface::WindowSurface,
     winit::{
         dpi::PhysicalPosition,
-        event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
+        event::{ElementState, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent},
+        keyboard::KeyCode,
     },
     Program, Surface,
 };
 use molecular_visualization::{
     arcball::ArcballControl,
-    args::Args,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
-    molecule::{Model, Molecule, Rotate, Scale, Translate},
+    molecule::{Model, Molecule, Rotate, Scale},
     sphere_batch::SphereBatch,
 };
 use nalgebra::{Matrix4, Point3, Vector3};
-use once_cell::sync::Lazy;
 
 struct Application {
     pub camera: PerspectiveCamera<Ready>,
@@ -85,7 +82,7 @@ impl ApplicationContext for Application {
                     .mouse_move(position.x as f32, position.y as f32);
             }
             WindowEvent::MouseInput { state, button, .. } => {
-                if *button == glium::winit::event::MouseButton::Left {
+                if *button == MouseButton::Left {
                     match state {
                         ElementState::Pressed => {
                             if let Some(pos) = self.last_cursor_position {
@@ -96,6 +93,9 @@ impl ApplicationContext for Application {
                             self.arcball.mouse_up();
                         }
                     }
+                }
+                if *button == MouseButton::Right && state == &ElementState::Pressed {
+                    self.molecule.toggle_silhouette();
                 }
             }
             WindowEvent::MouseWheel {
@@ -152,7 +152,7 @@ impl ApplicationContext for Application {
             camera_position: camera_position,
             debug_billboard: false,
             model: molecule_model,
-            u_show_silhouette: false,
+            u_show_silhouette: self.molecule.show_silhouette,
         };
 
         self.arcball.resize(

@@ -39,6 +39,7 @@ pub struct Molecule {
     pub atoms: SphereBatch,
     pub bonds: CylinderBatch,
     model_matrix: Matrix4<f32>,
+    pub show_silhouette: bool,
 }
 
 impl Molecule {
@@ -47,6 +48,7 @@ impl Molecule {
             atoms: SphereBatch::new(display)?,
             bonds: CylinderBatch::new(display)?,
             model_matrix: Matrix4::<f32>::identity(),
+            show_silhouette: false,
         })
     }
 
@@ -147,6 +149,10 @@ impl Molecule {
             }
         }
         cylinder_instances
+    }
+
+    pub fn toggle_silhouette(&mut self) {
+        self.show_silhouette = !self.show_silhouette;
     }
 
     /// Take a reference to a `Atom` and return a normalized RGBA color
