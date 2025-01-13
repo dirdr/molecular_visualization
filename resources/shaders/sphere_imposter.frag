@@ -12,21 +12,16 @@ out vec4 frag_color;
 uniform vec3 light_position;
 uniform vec3 camera_position;
 uniform bool debug_billboard;
-uniform bool u_show_silhouette; // Added uniform for silhouette control
 uniform mat4 projection;
 uniform mat4 view;
+uniform bool u_show_silhouette;
 
 void main() {
     // Convert texture coordinates from [0,1] to [-1,1]
     vec2 pos = v_uv_coordinates * 2.0 - 1.0;
 
-    // Ray origin (camera position)
     vec3 ray_origin = camera_position;
-
-    // Ray direction
     vec3 ray_dir = normalize(v_world_pos - camera_position);
-
-    // Sphere center
     vec3 sphere_center = v_center;
 
     // Ray-sphere intersection
@@ -50,45 +45,35 @@ void main() {
         discard;
     }
 
-    // Get the nearest intersection point
     float t = (-b - sqrt(discriminant)) / (2.0 * a);
     vec3 intersection = ray_origin + t * ray_dir;
 
-    // Calculate normal at intersection point
     vec3 normal = normalize(intersection - sphere_center);
 
-    // Light calculations
     vec3 light_dir = normalize(light_position - intersection);
     float distance_to_light = distance(light_position, intersection);
 
     // Attenuation based on distance
     float attenuation = 1.0 / (1.0 + 0.09 * distance_to_light + 0.032 * distance_to_light * distance_to_light);
 
-    // Diffuse lighting
     float diffuse = max(dot(normal, light_dir), 0.0) * attenuation;
 
-    // Specular lighting
     vec3 view_dir = normalize(camera_position - intersection);
     vec3 reflect_dir = reflect(-light_dir, normal);
     float shininess = 16.0; // Lower for broader highlights
     float specular = pow(max(dot(view_dir, reflect_dir), 0.0), shininess) * attenuation;
 
-    // Ambient light
     vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
     vec3 ambient = ambient_light * 0.7;
 
-    // Final color before silhouette
     vec3 final_color = v_color.rgb * (ambient + diffuse) + specular;
 
-    // Silhouette parameters
     const float SILHOUETTE_THRESHOLD = 0.4;
-    const vec3 SILHOUETTE_COLOR = vec3(0.0, 0.0, 0.0); // Black silhouette
+    const vec3 SILHOUETTE_COLOR = vec3(0.0, 0.0, 0.0);
 
-    // Compute the silhouette factor
     float ndotl = dot(normal, view_dir);
     float silhouette_factor = smoothstep(SILHOUETTE_THRESHOLD, SILHOUETTE_THRESHOLD + 0.1, abs(ndotl));
 
-    // Apply silhouette if enabled
     if (u_show_silhouette && silhouette_factor < 1.0) {
         final_color = mix(SILHOUETTE_COLOR, final_color, silhouette_factor);
     }

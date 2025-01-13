@@ -15,8 +15,6 @@ uniform vec3 light_position;
 uniform bool debug_billboard;
 uniform mat4 projection;
 uniform mat4 view;
-
-// New uniform for silhouette control
 uniform bool u_show_silhouette;
 
 void main() {
@@ -64,25 +62,21 @@ void main() {
     // Normal is the normalized vector from the closest point to the intersection point
     vec3 normal = normalize(intersection - closest_point);
 
-    // Lighting calculations
     vec3 light_dir = normalize(light_position - intersection);
     float distance_to_light = distance(light_position, intersection);
     float attenuation = 1.0 / (1.0 + 0.09 * distance_to_light + 0.032 * distance_to_light * distance_to_light);
 
-    // Diffuse lighting
     float diffuse = max(dot(normal, light_dir), 0.0) * attenuation;
 
-    // Specular lighting
     vec3 view_dir = normalize(camera_position - intersection);
     vec3 reflect_dir = reflect(-light_dir, normal);
     float shininess = 32.0; // Higher value for sharper highlights
     float specular = pow(max(dot(view_dir, reflect_dir), 0.0), shininess) * attenuation;
 
-    // Ambient lighting
     vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
     vec3 ambient = ambient_light * 0.70;
 
-    // Determine which color to use based on position
+    // Halfway coloring (first half of the color of the first atom, then second half of the color of the second atom)
     vec4 selected_color;
     if (t_normalized < 0.5) {
         selected_color = v_color_first_half;
@@ -93,20 +87,13 @@ void main() {
     // Combine lighting components with selected color
     vec3 final_color = selected_color.rgb * (ambient + diffuse) + specular;
 
-    // Silhouette parameters
     const float SILHOUETTE_THRESHOLD = 0.4;
-    const vec3 SILHOUETTE_COLOR = vec3(0.0, 0.0, 0.0); // Black silhouette
+    const vec3 SILHOUETTE_COLOR = vec3(0.0, 0.0, 0.0);
 
-    // Compute the silhouette factor
     float ndotl = dot(normal, view_dir);
     float silhouette_factor = smoothstep(SILHOUETTE_THRESHOLD, SILHOUETTE_THRESHOLD + 0.1, abs(ndotl));
 
-    // Apply silhouette if enabled
     if (u_show_silhouette && silhouette_factor < 1.0) {
-        // Option 1: Directly set to silhouette color
-        // final_color = SILHOUETTE_COLOR;
-
-        // Option 2: Blend silhouette color with final color
         final_color = mix(SILHOUETTE_COLOR, final_color, silhouette_factor);
     }
 
