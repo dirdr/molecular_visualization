@@ -4,7 +4,7 @@ use clap::Parser;
 #[command(
     name = "MolViz",
     author = "Adrien Pelfresne <adrien.pelfresne@gmail.com>",
-    about = "A simple OpenGL molecular visualisation, capable of reading protein data bank files.",
+    about = "A simple OpenGL molecular visualization, capable of reading protein data bank files.",
     long_about = None,
     version,
     help_template = "\
