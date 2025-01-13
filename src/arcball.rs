@@ -1,5 +1,10 @@
 use nalgebra::{UnitQuaternion, Vector2, Vector3};
 
+/// Shoeman arcball control for intuitive rotation,
+/// This implementation is using quaternion to avoid gimball locks.
+/// The code is ported from [this resource](https://raw.org/code/trackball-rotation-using-quaternions/).
+/// `radius` is controlling the virtual sphere radius, lowering it make the arcball rotation
+/// mecanically faster and conversaly.
 pub struct ArcballControl {
     last_quaternion: UnitQuaternion<f32>,
     current_quaternion: UnitQuaternion<f32>,
@@ -71,8 +76,6 @@ impl ArcballControl {
         // Similar to:
         // x' = (2*x - width - 1) / res
         // y' = (2*y - height - 1) / res
-        //
-        // We'll replicate that logic, with res = min(width, height) - 1
 
         let res = (self.width.min(self.height) - 1.0).max(1.0);
         let nx = (2.0 * x - self.width - 1.0) / res;

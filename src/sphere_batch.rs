@@ -12,7 +12,7 @@ use crate::geometry::quad::{Quad, QuadVertex};
 /// `vertex_buffer` hold the quad geometry for the sphere imposter, and `index_buffer` contains the
 /// quad indices describing the quad triangle decomposition, see `Quad` static accessor.
 ///
-/// `instance_buffer` contains the **per_instance** data, for each of the sphere imposer.
+/// `instance_buffer` contains the **per_instance** data, for each of the imposer.
 pub struct SphereBatch {
     pub vertex_buffer: VertexBuffer<QuadVertex>,
     pub index_buffer: IndexBuffer<u16>,

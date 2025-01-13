@@ -10,30 +10,10 @@ use pdbtbx::{Atom, Element, PDB};
 
 use crate::{
     cylinder_batch::{CylinderBatch, CylinderInstanceData},
+    geometry::{Model, Rotate, Scale, Translate},
     sphere_batch::{SphereBatch, SphereInstanceData},
     ARGS,
 };
-
-/// A molecule that is capable of applying a rotation matrix on the CPU
-pub trait Rotate {
-    fn rotate(&mut self, rotation_matrix: Matrix4<f32>);
-}
-
-/// A molecule that is capable of applying a scaling matrix on the CPU
-pub trait Scale {
-    fn scale(&mut self, scale_matrix: Matrix4<f32>);
-}
-
-/// A molecule that is capable of applying a translation matrix on the CPU
-pub trait Translate {
-    fn translate(&mut self, translate_matrix: Matrix4<f32>);
-}
-
-pub trait Model {
-    fn model_matrix(&self) -> Matrix4<f32>;
-
-    fn reset_model_matrix(&mut self);
-}
 
 pub struct Molecule {
     pub atoms: SphereBatch,
@@ -218,10 +198,10 @@ impl Molecule {
             Element::Au => Point4::new(1.0, 0.820, 0.137, 1.0), // 255/255, 209/255, 35/255
             Element::Pb => Point4::new(0.341, 0.349, 0.380, 1.0), // 87/255, 89/255, 97/255
             Element::U => Point4::new(0.0, 0.561, 1.0, 1.0), // 0, 143/255, 255/255
-            // Default for other elements
-            _ => Point4::new(1.0, 0.078, 0.576, 1.0), // 255/255, 20/255, 147/255 (pink)
+            _ => Point4::new(1.0, 0.078, 0.576, 1.0),      // 255/255, 20/255, 147/255 (pink)
         }
     }
+
     /// Assign a normalized atomic size based on the CPK radii.
     /// The sizes are scaled to fit OpenGL rendering.
     fn atom_size(atom: &Atom) -> f32 {
@@ -257,8 +237,7 @@ impl Molecule {
             _ => 1.75,
         };
 
-        // Scaling factor to convert Angstroms to our rendering scale
-        let scale: f32 = 0.2;
+        let scale: f32 = 0.25;
 
         cpk_radii as f32 * scale
     }
@@ -297,14 +276,12 @@ impl Rotate for Molecule {
 }
 
 impl Scale for Molecule {
-    /// Apply the `scale_matrix` to all the atoms and bonds of `self`.
     fn scale(&mut self, scale_matrix: Matrix4<f32>) {
         self.model_matrix = scale_matrix * self.model_matrix;
     }
 }
 
 impl Translate for Molecule {
-    /// Apply the `translate_matrix` to all the atoms and bonds of `self`.
     fn translate(&mut self, translate_matrix: Matrix4<f32>) {
         self.model_matrix = translate_matrix * self.model_matrix;
     }

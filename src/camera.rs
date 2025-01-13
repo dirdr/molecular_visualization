@@ -2,28 +2,33 @@ use std::f32::consts::PI;
 
 use nalgebra::{Matrix4, Point3, Vector3};
 
-/// Define a generic camera contract
+/// Define a generic Camera
 pub trait Camera {
     fn zoom(&mut self, zoom_amount: f32);
     fn get_view_matrix(&self) -> Matrix4<f32>;
     fn get_projection_matrix(&self, aspect_ratio: f32) -> Matrix4<f32>;
 }
 
+/// Camera marker for type-state pattern
 pub trait CameraState {}
 
-/// Define the initial state of the camera,
+/// Define the initial type-state of the camera,
 /// which is not placed nor pointed, thus not existing in the scene
 pub struct Virtual {}
 
+/// type-state marker for a camera that have a position in the scene
 pub struct Placed {
     pub pos: Point3<f32>,
 }
 
+/// type-state marker for a camera that look at a point in the scene
 pub struct Pointed {
     pub target: Point3<f32>,
     pub up: Vector3<f32>,
 }
 
+/// type-state marker for a camera that is placed, and look at something,
+/// which make it ready to use.
 pub struct Ready {
     pub pos: Point3<f32>,
     pub target: Point3<f32>,
@@ -34,8 +39,7 @@ pub struct Ready {
 /// `fov` is in radian.
 /// `fov_min` and `fov_max` hold the minimum and maximum acceptable value for the field of view of
 /// the camera, this is used to clamp the camera zoom.
-/// `state` is acting as a typestate marker for the camera state, while holding the state
-/// information.
+/// `state` is the type-state marker for the camera state, it also hold necessary informations.
 pub struct PerspectiveCamera<S: CameraState> {
     pub fov: f32,
     pub fov_min: f32,

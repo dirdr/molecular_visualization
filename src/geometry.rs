@@ -1,3 +1,23 @@
+use nalgebra::Matrix4;
+
+pub trait Rotate {
+    fn rotate(&mut self, rotation_matrix: Matrix4<f32>);
+}
+
+pub trait Scale {
+    fn scale(&mut self, scale_matrix: Matrix4<f32>);
+}
+
+pub trait Translate {
+    fn translate(&mut self, translate_matrix: Matrix4<f32>);
+}
+
+pub trait Model {
+    fn model_matrix(&self) -> Matrix4<f32>;
+
+    fn reset_model_matrix(&mut self);
+}
+
 pub mod quad {
     use glium::implement_vertex;
     /// Simple Quad static geometry definition

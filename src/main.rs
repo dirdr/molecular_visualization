@@ -5,22 +5,27 @@ use core::f32;
 
 use glium::{
     glutin::surface::WindowSurface,
+    uniforms::Uniforms,
     winit::{
         dpi::PhysicalPosition,
         event::{ElementState, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent},
     },
-    Program, Surface,
+    Frame, Program, Surface,
 };
 use molecular_visualization::{
     arcball::ArcballControl,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
-    molecule::{Model, Molecule, Rotate, Scale},
+    geometry::{Model, Rotate, Scale},
+    molecule::Molecule,
     sphere_batch::SphereBatch,
 };
 use nalgebra::{Matrix4, Point3, Vector3};
 
+/// OpenGL Application wrapper,
+/// contains all the necessary informations to make the program run,
+/// for more informations on how the glium/winit backend is running, see `backend.rs`.
 struct Application {
     pub camera: PerspectiveCamera<Ready>,
     pub arcball: ArcballControl,
@@ -28,6 +33,38 @@ struct Application {
     pub molecule: Molecule,
     pub sphere_instances_program: Program,
     pub cylinder_instance_program: Program,
+    light: Point3<f32>,
+}
+
+impl Application {
+    fn get_uniforms(&mut self, frame: &Frame) -> impl Uniforms {
+        self.molecule.reset_model_matrix();
+        self.molecule
+            .scale(Matrix4::new_scaling(self.molecule.scale_factor));
+        self.molecule.rotate(self.arcball.get_rotation_matrix());
+        let molecule_model: [[f32; 4]; 4] = self.molecule.model_matrix().into();
+
+        let view: [[f32; 4]; 4] = self.camera.get_view_matrix().into();
+
+        // HACK - the aspect ratio is passed dynamically at each frame mainly to avoid scaling with
+        // a fixed base aspect ratio.
+        let (width, height) = frame.get_dimensions();
+        let aspect_ratio = width as f32 / height as f32;
+        let projection: [[f32; 4]; 4] = self.camera.get_projection_matrix(aspect_ratio).into();
+
+        let light: [f32; 3] = self.light.into();
+        let camera_position: [f32; 3] = self.camera.get_position().into();
+
+        uniform! {
+            view: view,
+            projection: projection,
+            light_position: light,
+            camera_position: camera_position,
+            debug_billboard: false,
+            model: molecule_model,
+            u_show_silhouette: self.molecule.show_silhouette,
+        }
+    }
 }
 
 impl ApplicationContext for Application {
@@ -66,6 +103,7 @@ impl ApplicationContext for Application {
                 .expect("Sphere shader program has failed to build"),
             cylinder_instance_program: CylinderBatch::build_program(display)
                 .expect("Cylinder shader program has failed to build"),
+            light: Point3::new(0.0, 2.0, 1.0),
         }
     }
 
@@ -117,43 +155,7 @@ impl ApplicationContext for Application {
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
-        self.molecule.reset_model_matrix();
-
-        self.molecule
-            .scale(Matrix4::new_scaling(self.molecule.scale_factor));
-
-        let rotation = self.arcball.get_rotation_matrix();
-        self.molecule.rotate(rotation);
-
-        self.molecule
-            .sync_buffers(display)
-            .expect("Failed to synchronize the molecule instances buffer");
-
-        let view = self.camera.get_view_matrix();
-        let view_array: [[f32; 4]; 4] = view.into();
-
-        let (width, height) = frame.get_dimensions();
-        let aspect_ratio = width as f32 / height as f32;
-
-        // HACK - the aspect ratio is passed dynamically at each frame mainly to avoid scaling with
-        // a fixed base aspect ratio.
-        let projection = self.camera.get_projection_matrix(aspect_ratio);
-        let projection_array: [[f32; 4]; 4] = *projection.as_ref();
-
-        let light: [f32; 3] = Point3::new(0.0, 1.0, 0.0).into();
-        let camera_position: [f32; 3] = self.camera.get_position().into();
-
-        let molecule_model: [[f32; 4]; 4] = self.molecule.model_matrix().into();
-
-        let uniforms = uniform! {
-            view: view_array,
-            projection: projection_array,
-            light_position: light,
-            camera_position: camera_position,
-            debug_billboard: false,
-            model: molecule_model,
-            u_show_silhouette: self.molecule.show_silhouette,
-        };
+        let uniforms = self.get_uniforms(&frame);
 
         self.arcball.resize(
             frame.get_dimensions().0 as f32,
@@ -202,7 +204,7 @@ impl ApplicationContext for Application {
         frame.finish().unwrap();
     }
 
-    const WINDOW_TITLE: &'static str = "PDB Viewer - Adrien Pelfresne - FIB 2025";
+    const WINDOW_TITLE: &'static str = "Adrien Pelfresne's MolViz";
 }
 
 fn main() {

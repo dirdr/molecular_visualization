@@ -8,6 +8,18 @@ use nalgebra::{Point3, Point4};
 
 use crate::geometry::quad::{Quad, QuadVertex};
 
+/// This struct hold a instancing imposter cylinder batch informations.
+/// `vertex_buffer` hold the quad geometry for the imposter, and `index_buffer` contains the
+/// quad indices describing the quad triangle decomposition, see `Quad` static accessor.
+///
+/// `instance_buffer` contains the **per_instance** data, for each of the imposer.
+pub struct CylinderBatch {
+    pub vertex_buffer: VertexBuffer<QuadVertex>,
+    pub index_buffer: IndexBuffer<u16>,
+    pub instance_buffer: VertexBuffer<CylinderInstanceData>,
+    pub instances: Vec<CylinderInstanceData>,
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct CylinderInstanceData {
     pub instance_start_pos: [f32; 3],
@@ -25,13 +37,6 @@ implement_vertex!(
     instance_color_second_half,
     instance_radius
 );
-
-pub struct CylinderBatch {
-    pub vertex_buffer: VertexBuffer<QuadVertex>,
-    pub index_buffer: IndexBuffer<u16>,
-    pub instance_buffer: VertexBuffer<CylinderInstanceData>,
-    pub instances: Vec<CylinderInstanceData>,
-}
 
 impl CylinderInstanceData {
     pub fn new(

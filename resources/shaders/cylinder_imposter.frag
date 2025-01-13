@@ -80,7 +80,7 @@ void main() {
 
     // Ambient lighting
     vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
-    vec3 ambient = ambient_light * 0.7;
+    vec3 ambient = ambient_light * 0.70;
 
     // Determine which color to use based on position
     vec4 selected_color;
