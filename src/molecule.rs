@@ -335,9 +335,11 @@ fn parse_bonds(file_path: &str) -> anyhow::Result<Vec<ConectRecord>> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
 
-    Ok(reader
+    let bonds = reader
         .lines()
         .map_while(Result::ok)
         .filter_map(|line| ConectRecord::from_line(&line))
-        .collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    Ok(bonds)
 }

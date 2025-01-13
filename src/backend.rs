@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use glium::{
     glutin::surface::WindowSurface,
     winit::{
@@ -147,5 +149,38 @@ impl<T: ApplicationContext + 'static> State<T> {
         };
         let result = event_loop.run_app(&mut app);
         result.unwrap();
+    }
+}
+
+pub struct FpsCounter {
+    last_second: Instant,
+    pub frames: u32,
+    pub fps: u32,
+}
+
+impl FpsCounter {
+    pub fn new() -> Self {
+        Self {
+            last_second: Instant::now(),
+            frames: 0,
+            fps: 0,
+        }
+    }
+
+    pub fn update(&mut self) {
+        self.frames += 1;
+        let elapsed = self.last_second.elapsed();
+
+        if elapsed >= Duration::from_secs(1) {
+            self.fps = self.frames;
+            self.frames = 0;
+            self.last_second = Instant::now();
+        }
+    }
+}
+
+impl Default for FpsCounter {
+    fn default() -> Self {
+        Self::new()
     }
 }

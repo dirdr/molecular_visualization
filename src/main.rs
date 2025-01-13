@@ -14,7 +14,7 @@ use glium::{
 };
 use molecular_visualization::{
     arcball::ArcballControl,
-    backend::{ApplicationContext, State},
+    backend::{ApplicationContext, FpsCounter, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
     geometry::{Model, Rotate, Scale},
@@ -34,6 +34,7 @@ struct Application {
     pub sphere_instances_program: Program,
     pub cylinder_instance_program: Program,
     light: Point3<f32>,
+    fps_counter: FpsCounter,
 }
 
 impl Application {
@@ -104,6 +105,7 @@ impl ApplicationContext for Application {
             cylinder_instance_program: CylinderBatch::build_program(display)
                 .expect("Cylinder shader program has failed to build"),
             light: Point3::new(0.0, 2.0, 1.0),
+            fps_counter: FpsCounter::new(),
         }
     }
 
@@ -154,6 +156,8 @@ impl ApplicationContext for Application {
     }
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
+        self.fps_counter.update();
+        println!("FPS: {}", self.fps_counter.fps);
         let mut frame = display.draw();
         let uniforms = self.get_uniforms(&frame);
 
