@@ -15,4 +15,4 @@ pub mod sphere_batch;
 pub static GLSL_TARGET: u16 = 410;
 pub static OPEN_GL_TARGET: glium::Version = glium::Version(glium::Api::Gl, 4, 1);
 
-pub static ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
+pub static ARGS: Lazy<Args> = Lazy::new(Args::parse);

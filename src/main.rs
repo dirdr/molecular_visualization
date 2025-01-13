@@ -8,7 +8,6 @@ use glium::{
     winit::{
         dpi::PhysicalPosition,
         event::{ElementState, MouseButton, MouseScrollDelta, TouchPhase, WindowEvent},
-        keyboard::KeyCode,
     },
     Program, Surface,
 };
