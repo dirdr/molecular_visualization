@@ -28,8 +28,6 @@ pub struct SphereInstanceData {
     pub instance_pos: [f32; 3],
     pub instance_color: [f32; 4],
     pub instance_radius: f32,
-
-    pub original_pos: Point3<f32>,
 }
 
 impl SphereInstanceData {
@@ -38,7 +36,6 @@ impl SphereInstanceData {
             instance_pos: pos.into(),
             instance_color: color.into(),
             instance_radius: radius,
-            original_pos: pos,
         }
     }
 }

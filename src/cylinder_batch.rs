@@ -14,9 +14,6 @@ pub struct CylinderInstanceData {
     pub instance_end_pos: [f32; 3],
     pub instance_color: [f32; 4],
     pub instance_radius: f32,
-
-    pub original_start_pos: Point3<f32>,
-    pub original_end_pos: Point3<f32>,
 }
 
 implement_vertex!(
@@ -46,8 +43,6 @@ impl CylinderInstanceData {
             instance_end_pos: end_pos.into(),
             instance_color: color.into(),
             instance_radius: radius,
-            original_start_pos: start_pos,
-            original_end_pos: end_pos,
         }
     }
 }

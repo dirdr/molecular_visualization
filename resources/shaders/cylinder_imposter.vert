@@ -51,6 +51,6 @@ void main() {
     v_start = transformed_start_pos;
     v_end = transformed_end_pos;
     v_color = instance_color;
-    v_radius = instance_radius * model[0][0];
+    v_radius = scaled_radius;
     gl_Position = projection * view * vec4(world_pos, 1.0);
 }

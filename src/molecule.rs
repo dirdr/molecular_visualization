@@ -1,6 +1,13 @@
+use std::{
+    collections::HashSet,
+    fs::File,
+    hash::Hash,
+    io::{BufRead, BufReader},
+};
+
 use glium::glutin::surface::WindowSurface;
 use nalgebra::{Matrix4, Point3, Point4, Vector3};
-use pdbtbx::{Atom, Element};
+use pdbtbx::{Atom, Bond, Element, PDB};
 
 use crate::{
     cylinder_batch::{CylinderBatch, CylinderInstanceData},
@@ -50,10 +57,11 @@ impl Molecule {
     }
 
     pub fn init_molecule(&mut self, display: &glium::Display<WindowSurface>) -> anyhow::Result<()> {
-        let pdb = pdbtbx::open("./resources/pdb/liquid.pdb").unwrap().0;
+        let mut pdb = pdbtbx::open("./resources/pdb/c2h5oh.pdb").unwrap().0;
         let mut atom_instances = Vec::new();
 
         for model in pdb.models() {
+            println!("{:?}", model);
             for atom in model.atoms() {
                 let position = Point3::new(atom.x() as f32, atom.y() as f32, atom.z() as f32);
                 let color = Self::atom_color(atom);
@@ -62,28 +70,50 @@ impl Molecule {
             }
         }
 
-        // HACK THIS IS NOT THE MOELCULE REALITY!!! AD-HOC CODE TO SHOW THE BOND IN THE SIMULATIOn
-        let bond_radius = 0.1;
+        let bonds = parse_bonds("./resources/pdb/c2h5oh.pdb")?;
         let mut bond_instances = vec![];
-        for (i, atom1) in pdb.models().flat_map(|m| m.atoms()).enumerate() {
-            let pos1 = Point3::new(atom1.x() as f32, atom1.y() as f32, atom1.z() as f32);
-            for atom2 in pdb.models().flat_map(|m| m.atoms()).skip(i + 1) {
-                let pos2 = Point3::new(atom2.x() as f32, atom2.y() as f32, atom2.z() as f32);
-                let distance = (pos2 - pos1).norm();
+        let mut already_connected = HashSet::new();
 
-                let max_bond_distance = 1.0;
-                if distance <= max_bond_distance {
-                    let bond_color = Point4::new(0.65, 0.65, 0.65, 1.0);
-                    bond_instances.push(CylinderInstanceData::new(
-                        pos1,
-                        pos2,
-                        bond_color,
-                        bond_radius,
-                    ));
+        for bond in bonds {
+            println!(
+                "Atom : {:?}, connecté aux atomes : {:?}",
+                bond.source_atom, bond.bonded_atoms,
+            );
+            let start = pdb.atom(bond.source_atom);
+            if start.is_none() {
+                continue;
+            }
+            let start = start.unwrap();
+            for connected in bond.bonded_atoms {
+                let end = pdb.atom(connected);
+
+                if end.is_none() {
+                    continue;
                 }
+
+                let end = end.unwrap();
+
+                let start_pos = [start.x() as f32, start.y() as f32, start.z() as f32];
+                let end_pos = [end.x() as f32, end.y() as f32, end.z() as f32];
+
+                let bond_color = [0.8, 0.8, 0.8, 1.0];
+                let bond_radius = 0.1;
+
+                if already_connected.contains(&(start.serial_number(), end.serial_number()))
+                    || already_connected.contains(&(end.serial_number(), start.serial_number()))
+                {
+                    continue;
+                }
+
+                bond_instances.push(CylinderInstanceData {
+                    instance_start_pos: start_pos,
+                    instance_end_pos: end_pos,
+                    instance_color: bond_color,
+                    instance_radius: bond_radius,
+                });
+                already_connected.insert((start.serial_number(), end.serial_number()));
             }
         }
-
         self.atoms.update_instances(&atom_instances);
         self.bonds.update_instances(&bond_instances);
         self.sync_buffers(display)?;
@@ -189,4 +219,49 @@ impl Model for Molecule {
     fn reset_model_matrix(&mut self) {
         self.model_matrix = Matrix4::<f32>::identity();
     }
+}
+
+/// Represents a CONECT record from a PDB file
+#[derive(Debug)]
+struct ConectRecord {
+    source_atom: usize,
+    bonded_atoms: Vec<usize>,
+}
+
+impl ConectRecord {
+    /// Parse a CONECT line into a ConectRecord
+    fn from_line(line: &str) -> Option<Self> {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        // CONECT records must have at least 2 numbers
+        if parts.len() < 3 || !parts[0].starts_with("CONECT") {
+            return None;
+        }
+
+        // Parse source atom
+        let source_atom = parts[1].parse().ok()?;
+
+        // Parse bonded atoms
+        let bonded_atoms = parts[2..]
+            .iter()
+            .filter_map(|s| s.parse().ok())
+            .filter(|&num| num != source_atom) // Avoid self-bonds
+            .collect();
+
+        Some(ConectRecord {
+            source_atom,
+            bonded_atoms,
+        })
+    }
+}
+
+fn parse_bonds(file_path: &str) -> anyhow::Result<Vec<ConectRecord>> {
+    let file = File::open(file_path)?;
+    let reader = BufReader::new(file);
+
+    Ok(reader
+        .lines()
+        .map_while(Result::ok)
+        .filter_map(|line| ConectRecord::from_line(&line))
+        .collect::<Vec<_>>())
 }

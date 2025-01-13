@@ -5,12 +5,15 @@ in vec3 v_world_pos;
 in vec3 v_center;
 in vec4 v_color;
 in float v_radius;
+in float v_depth;
 
 out vec4 frag_color;
 
 uniform vec3 light_position;
 uniform vec3 camera_position;
 uniform bool debug_billboard;
+uniform mat4 projection;
+uniform mat4 view;
 
 void main() {
     // Convert texture coordinates from [0,1] to [-1,1]
@@ -63,4 +66,14 @@ void main() {
     float ambient = 0.3;
 
     frag_color = v_color * (ambient + diffuse + specular);
+
+    // Depth calculation
+    // Convert intersection point to clip space
+    vec4 clip_space = projection * view * vec4(intersection, 1.0);
+    float ndc_depth = clip_space.z / clip_space.w;
+    float window_depth = (ndc_depth * 0.5) + 0.5; // Map from [-1,1] to [0,1]
+
+    // Apply a small depth bias to prevent z-fighting
+    float depth_bias = 0.0001;
+    gl_FragDepth = window_depth + depth_bias;
 }

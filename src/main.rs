@@ -112,8 +112,7 @@ impl ApplicationContext for Application {
         let mut frame = display.draw();
         self.molecule.reset_model_matrix();
 
-        let scaling_factor = 0.1;
-        self.molecule.scale(Matrix4::new_scaling(scaling_factor));
+        self.molecule.scale(Matrix4::new_scaling(0.5));
 
         let rotation = self.arcball.get_rotation_matrix();
         self.molecule.rotate(rotation);
@@ -165,7 +164,6 @@ impl ApplicationContext for Application {
         };
 
         frame.clear_color_and_depth((0.1294, 0.1294, 0.1294, 1.0), 1.0);
-        frame.clear_stencil(1);
         frame
             .draw(
                 (

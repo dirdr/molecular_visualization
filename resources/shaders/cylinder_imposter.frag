@@ -11,6 +11,8 @@ out vec4 frag_color;
 uniform vec3 camera_position;
 uniform vec3 light_position;
 uniform bool debug_billboard;
+uniform mat4 projection;
+uniform mat4 view;
 
 void main() {
     // Ray-cylinder intersection
@@ -69,9 +71,15 @@ void main() {
     float ambient = 0.4;
     vec3 final_color = v_color.rgb * (ambient + diffuse + specular);
 
-    float depth_bias = 0.000;
-    gl_FragDepth = gl_FragCoord.z + depth_bias;
+    // Calculate depth in view space
+    // Convert world position to clip space to get correct depth
+    vec4 clip_space = projection * view * vec4(intersection, 1.0);
+    float ndc_depth = clip_space.z / clip_space.w;
+    float window_depth = (ndc_depth * 0.5) + 0.5; // Map from [-1,1] to [0,1]
+
+    // Apply a small depth bias to prevent z-fighting
+    float depth_bias = 0.0001;
+    gl_FragDepth = window_depth + depth_bias;
 
     frag_color = vec4(final_color, v_color.a);
 }
-
