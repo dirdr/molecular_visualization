@@ -138,7 +138,8 @@ impl Molecule {
                 cylinder_instances.push(CylinderInstanceData {
                     instance_start_pos: start_pos,
                     instance_end_pos: end_pos,
-                    instance_color: [0.8, 0.8, 0.8, 1.0],
+                    instance_color_first_half: Self::atom_color(start).into(),
+                    instance_color_second_half: Self::atom_color(end).into(),
                     instance_radius: 0.15,
                 });
 
@@ -153,7 +154,7 @@ impl Molecule {
     fn atom_color(atom: &Atom) -> Point4<f32> {
         match atom.element().unwrap() {
             Element::H => Point4::new(1.0, 1.0, 1.0, 1.0),
-            Element::C => Point4::new(0.0, 0.0, 0.0, 1.0),
+            Element::C => Point4::new(0.2, 0.2, 0.2, 1.0),
             Element::N => Point4::new(0.0, 0.0, 1.0, 1.0),
             Element::O => Point4::new(1.0, 0.0, 0.0, 1.0),
             Element::F | Element::Cl => Point4::new(0.0, 1.0, 0.0, 1.0),

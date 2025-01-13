@@ -4,7 +4,8 @@ in vec2 v_uv_coordinates;
 in vec3 v_world_pos;
 in vec3 v_start;
 in vec3 v_end;
-in vec4 v_color;
+in vec4 v_color_first_half;
+in vec4 v_color_second_half;
 in float v_radius;
 
 out vec4 frag_color;
@@ -24,7 +25,6 @@ void main() {
     vec3 ray_dir = normalize(v_world_pos - camera_position);
 
     vec3 cylinder_dir = normalize(v_end - v_start);
-    vec3 cylinder_center = (v_start + v_end) * 0.5;
     float cylinder_length = distance(v_end, v_start);
 
     // Calculate cylinder intersection
@@ -55,6 +55,9 @@ void main() {
         discard;
     }
 
+    // Compute normalized position along the cylinder (0.0 to 1.0)
+    float t_normalized = along_cylinder / cylinder_length;
+
     // Closest point on the cylinder axis
     vec3 closest_point = v_start + dot(intersection - v_start, cylinder_dir) * cylinder_dir;
 
@@ -77,10 +80,18 @@ void main() {
 
     // Ambient lighting
     vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
-    vec3 ambient = ambient_light * 0.3;
+    vec3 ambient = ambient_light * 0.7;
 
-    // Combine lighting components
-    vec3 final_color = v_color.rgb * (ambient + diffuse) + specular;
+    // Determine which color to use based on position
+    vec4 selected_color;
+    if (t_normalized < 0.5) {
+        selected_color = v_color_first_half;
+    } else {
+        selected_color = v_color_second_half;
+    }
+
+    // Combine lighting components with selected color
+    vec3 final_color = selected_color.rgb * (ambient + diffuse) + specular;
 
     // Silhouette parameters
     const float SILHOUETTE_THRESHOLD = 0.4;
@@ -92,8 +103,11 @@ void main() {
 
     // Apply silhouette if enabled
     if (u_show_silhouette && silhouette_factor < 1.0) {
-        //final_color = mix(SILHOUETTE_COLOR, final_color, silhouette_factor);
-        final_color = SILHOUETTE_COLOR;
+        // Option 1: Directly set to silhouette color
+        // final_color = SILHOUETTE_COLOR;
+
+        // Option 2: Blend silhouette color with final color
+        final_color = mix(SILHOUETTE_COLOR, final_color, silhouette_factor);
     }
 
     // Calculate depth in view space
@@ -105,5 +119,5 @@ void main() {
     float depth_bias = 0.0001;
     gl_FragDepth = window_depth + depth_bias;
 
-    frag_color = vec4(final_color, v_color.a);
+    frag_color = vec4(final_color, selected_color.a);
 }

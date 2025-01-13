@@ -75,7 +75,7 @@ void main() {
 
     // Ambient light
     vec3 ambient_light = vec3(0.3, 0.3, 0.4); // Slightly bluish ambient light
-    vec3 ambient = ambient_light * 0.3;
+    vec3 ambient = ambient_light * 0.7;
 
     // Final color before silhouette
     vec3 final_color = v_color.rgb * (ambient + diffuse) + specular;

@@ -6,14 +6,16 @@ layout(location = 1) in vec2 uv_coordinates;
 
 layout(location = 2) in vec3 instance_start_pos;
 layout(location = 3) in vec3 instance_end_pos;
-layout(location = 4) in vec4 instance_color;
-layout(location = 5) in float instance_radius;
+layout(location = 4) in vec4 instance_color_first_half;
+layout(location = 5) in vec4 instance_color_second_half;
+layout(location = 6) in float instance_radius;
 
 out vec2 v_uv_coordinates;
 out vec3 v_world_pos;
 out vec3 v_start;
 out vec3 v_end;
-out vec4 v_color;
+out vec4 v_color_second_half;
+out vec4 v_color_first_half;
 out float v_radius;
 
 uniform mat4 view;
@@ -50,7 +52,8 @@ void main() {
     v_world_pos = world_pos;
     v_start = transformed_start_pos;
     v_end = transformed_end_pos;
-    v_color = instance_color;
+    v_color_first_half = instance_color_first_half;
+    v_color_second_half = instance_color_second_half;
     v_radius = scaled_radius;
     gl_Position = projection * view * vec4(world_pos, 1.0);
 }
