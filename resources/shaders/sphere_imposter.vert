@@ -4,38 +4,35 @@
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec2 uv_coordinates;
 
-// Instance attributes
 layout(location = 2) in vec3 instance_pos;
 layout(location = 3) in vec4 instance_color;
 layout(location = 4) in float instance_radius;
 
-// Outputs to fragment shader
 out vec2 v_uv_coordinates;
 out vec3 v_world_pos;
 out vec3 v_center;
 out vec4 v_color;
 out float v_radius;
 
-// Camera uniforms
 uniform mat4 view;
 uniform mat4 projection;
-uniform mat4 scene_model; // Scene model matrix
+uniform mat4 model;
 
 void main() {
-    // Transform the instance position using the scene model matrix
-    vec3 transformed_instance_pos = (scene_model * vec4(instance_pos, 1.0)).xyz;
+    vec3 transformed_instance_pos = (model * vec4(instance_pos, 1.0)).xyz;
 
     // Adjust camera basis vectors
     vec3 camera_right = vec3(view[0][0], view[1][0], view[2][0]);
     vec3 camera_up = vec3(view[0][1], view[1][1], view[2][1]);
 
-    // Scale the radius based on the scene model matrix (uniform scaling assumed)
-    float scaled_radius = instance_radius * scene_model[0][0];
+    float scale_x = length(vec3(model[0][0], model[1][0], model[2][0]));
+    // Assuming uniform scaling, scale_x, scale_y, and scale_z should be equal
+    float scaled_radius = instance_radius * scale_x;
 
     // Compute the world position of the quad vertices
     vec3 world_pos = transformed_instance_pos
-            + camera_right * pos.x * scaled_radius * 2.0 // Scale width by radius
-            + camera_up * pos.y * scaled_radius * 2.0; // Scale height by radius
+            + camera_right * pos.x * scaled_radius * 2.0
+            + camera_up * pos.y * scaled_radius * 2.0;
 
     // Pass data to the fragment shader
     v_uv_coordinates = uv_coordinates;
@@ -44,6 +41,5 @@ void main() {
     v_color = instance_color;
     v_radius = scaled_radius;
 
-    // Apply transformations to compute final vertex position
     gl_Position = projection * view * vec4(world_pos, 1.0);
 }

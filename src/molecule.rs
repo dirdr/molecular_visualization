@@ -4,13 +4,34 @@ use pdbtbx::{Atom, Element};
 
 use crate::{
     cylinder_batch::{CylinderBatch, CylinderInstanceData},
-    geometry::{Rotate, Scale, Translate},
     sphere_batch::{SphereBatch, SphereInstanceData},
 };
+
+/// A molecule that is capable of applying a rotation matrix on the CPU
+pub trait Rotate {
+    fn rotate(&mut self, rotation_matrix: Matrix4<f32>);
+}
+
+/// A molecule that is capable of applying a scaling matrix on the CPU
+pub trait Scale {
+    fn scale(&mut self, scale_matrix: Matrix4<f32>);
+}
+
+/// A molecule that is capable of applying a translation matrix on the CPU
+pub trait Translate {
+    fn translate(&mut self, translate_matrix: Matrix4<f32>);
+}
+
+pub trait Model {
+    fn model_matrix(&self) -> Matrix4<f32>;
+
+    fn reset_model_matrix(&mut self);
+}
 
 pub struct Molecule {
     pub atoms: SphereBatch,
     pub bonds: CylinderBatch,
+    model_matrix: Matrix4<f32>,
 }
 
 impl Molecule {
@@ -18,6 +39,7 @@ impl Molecule {
         Ok(Self {
             atoms: SphereBatch::new(display)?,
             bonds: CylinderBatch::new(display)?,
+            model_matrix: Matrix4::<f32>::identity(),
         })
     }
 
@@ -66,59 +88,6 @@ impl Molecule {
         self.bonds.update_instances(&bond_instances);
         self.sync_buffers(display)?;
         Ok(())
-    }
-
-    pub fn center_molecule(&mut self) {
-        let atom_count = self.atoms.instances.len();
-        if atom_count == 0 {
-            return;
-        }
-
-        let barycenter: Point3<f32> =
-            self.atoms
-                .instances
-                .iter()
-                .fold(Point3::origin(), |acc, atom| {
-                    acc + Vector3::new(
-                        atom.instance_pos[0],
-                        atom.instance_pos[1],
-                        atom.instance_pos[2],
-                    )
-                })
-                / atom_count as f32;
-
-        for atom in &mut self.atoms.instances {
-            let pos = Point3::new(
-                atom.instance_pos[0],
-                atom.instance_pos[1],
-                atom.instance_pos[2],
-            );
-            let shifted_pos = pos - barycenter.coords;
-            atom.instance_pos = [shifted_pos.x, shifted_pos.y, shifted_pos.z];
-        }
-
-        for bond in &mut self.bonds.instances {
-            let start_pos = Point3::new(
-                bond.instance_start_pos[0],
-                bond.instance_start_pos[1],
-                bond.instance_start_pos[2],
-            );
-            let end_pos = Point3::new(
-                bond.instance_end_pos[0],
-                bond.instance_end_pos[1],
-                bond.instance_end_pos[2],
-            );
-
-            let shifted_start_pos = start_pos - barycenter.coords;
-            let shifted_end_pos = end_pos - barycenter.coords;
-
-            bond.instance_start_pos = [
-                shifted_start_pos.x,
-                shifted_start_pos.y,
-                shifted_start_pos.z,
-            ];
-            bond.instance_end_pos = [shifted_end_pos.x, shifted_end_pos.y, shifted_end_pos.z];
-        }
     }
 
     /// Take a reference to a `Atom` and return a normalized RGBA color
@@ -186,71 +155,38 @@ impl Molecule {
         };
 
         // Scaling factor to convert Angstroms to our rendering scale
-        let scale: f32 = 0.5;
+        let scale: f32 = 0.2;
 
         cpk_radii as f32 * scale
     }
 }
 
 impl Rotate for Molecule {
-    /// Apply the `rotation_matrix` to all the atoms and bonds of `self`.
     fn rotate(&mut self, rotation_matrix: Matrix4<f32>) {
-        for atom in self.atoms.instances.iter_mut() {
-            let rotated = rotation_matrix * atom.original_pos.to_homogeneous();
-            atom.instance_pos = [rotated.x, rotated.y, rotated.z];
-        }
-        for bond in self.bonds.instances.iter_mut() {
-            let rotated_start_pos = rotation_matrix * bond.original_start_pos.to_homogeneous();
-            let rotated_end_pos = rotation_matrix * bond.original_end_pos.to_homogeneous();
-
-            bond.instance_start_pos = [
-                rotated_start_pos.x,
-                rotated_start_pos.y,
-                rotated_start_pos.z,
-            ];
-            bond.instance_end_pos = [rotated_end_pos.x, rotated_end_pos.y, rotated_end_pos.z];
-        }
+        self.model_matrix = rotation_matrix * self.model_matrix;
     }
 }
 
 impl Scale for Molecule {
     /// Apply the `scale_matrix` to all the atoms and bonds of `self`.
     fn scale(&mut self, scale_matrix: Matrix4<f32>) {
-        for atom in self.atoms.instances.iter_mut() {
-            let scaled = scale_matrix * atom.original_pos.to_homogeneous();
-            atom.instance_pos = [scaled.x, scaled.y, scaled.z];
-        }
-        for bond in self.bonds.instances.iter_mut() {
-            let scaled_start_pos = scale_matrix * bond.original_start_pos.to_homogeneous();
-            let scaled_end_pos = scale_matrix * bond.original_end_pos.to_homogeneous();
-
-            bond.instance_start_pos = [scaled_start_pos.x, scaled_start_pos.y, scaled_start_pos.z];
-            bond.instance_end_pos = [scaled_end_pos.x, scaled_end_pos.y, scaled_end_pos.z];
-        }
+        self.model_matrix = scale_matrix * self.model_matrix;
     }
 }
 
 impl Translate for Molecule {
     /// Apply the `translate_matrix` to all the atoms and bonds of `self`.
     fn translate(&mut self, translate_matrix: Matrix4<f32>) {
-        for atom in self.atoms.instances.iter_mut() {
-            let translated = translate_matrix * atom.original_pos.to_homogeneous();
-            atom.instance_pos = [translated.x, translated.y, translated.z];
-        }
-        for bond in self.bonds.instances.iter_mut() {
-            let translated_start_pos = translate_matrix * bond.original_start_pos.to_homogeneous();
-            let translated_end_pos = translate_matrix * bond.original_end_pos.to_homogeneous();
+        self.model_matrix = translate_matrix * self.model_matrix;
+    }
+}
 
-            bond.instance_start_pos = [
-                translated_start_pos.x,
-                translated_start_pos.y,
-                translated_start_pos.z,
-            ];
-            bond.instance_end_pos = [
-                translated_end_pos.x,
-                translated_end_pos.y,
-                translated_end_pos.z,
-            ];
-        }
+impl Model for Molecule {
+    fn model_matrix(&self) -> Matrix4<f32> {
+        self.model_matrix
+    }
+
+    fn reset_model_matrix(&mut self) {
+        self.model_matrix = Matrix4::<f32>::identity();
     }
 }

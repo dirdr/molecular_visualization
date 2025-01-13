@@ -9,15 +9,14 @@ use glium::{
         dpi::PhysicalPosition,
         event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
     },
-    DrawParameters, Program, Surface,
+    Program, Surface,
 };
 use molecular_visualization::{
     arcball::ArcballControl,
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
-    geometry::Rotate,
-    molecule::Molecule,
+    molecule::{Model, Molecule, Rotate, Scale},
     sphere_batch::SphereBatch,
 };
 use nalgebra::{Matrix4, Point3, Vector3};
@@ -53,7 +52,6 @@ impl ApplicationContext for Application {
         molecule
             .init_molecule(display)
             .expect("Failed to populate molecule instances");
-        molecule.center_molecule();
 
         Self {
             camera,
@@ -112,6 +110,10 @@ impl ApplicationContext for Application {
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         let mut frame = display.draw();
+        self.molecule.reset_model_matrix();
+
+        let scaling_factor = 0.1;
+        self.molecule.scale(Matrix4::new_scaling(scaling_factor));
 
         let rotation = self.arcball.get_rotation_matrix();
         self.molecule.rotate(rotation);
@@ -134,8 +136,7 @@ impl ApplicationContext for Application {
         let light: [f32; 3] = Point3::new(0.0, 3.0, 2.0).into();
         let camera_position: [f32; 3] = self.camera.get_position().into();
 
-        let scaling_factor = 0.1; // Uniform scaling factor
-        let scene_model: [[f32; 4]; 4] = Matrix4::new_scaling(scaling_factor).into();
+        let molecule_model: [[f32; 4]; 4] = self.molecule.model_matrix().into();
 
         let uniforms = uniform! {
             view: view_array,
@@ -143,7 +144,7 @@ impl ApplicationContext for Application {
             light_position: light,
             camera_position: camera_position,
             debug_billboard: false,
-            scene_model: scene_model
+            model: molecule_model,
         };
 
         self.arcball.resize(
@@ -154,46 +155,10 @@ impl ApplicationContext for Application {
         assert!(self.molecule.atoms.index_buffer.get_size() != 0);
         assert!(self.molecule.atoms.vertex_buffer.get_size() != 0);
 
-        let sphere_draw_params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::draw_parameters::DepthTest::IfLess,
-                write: true,
-                ..Default::default()
-            },
-            stencil: glium::draw_parameters::Stencil {
-                reference_value_clockwise: 1,
-                write_mask_clockwise: 0xFF,
-                fail_operation_clockwise: glium::StencilOperation::Keep,
-                pass_depth_fail_operation_clockwise: glium::StencilOperation::Keep,
-                depth_pass_operation_clockwise: glium::StencilOperation::Replace,
-                test_clockwise: glium::StencilTest::AlwaysPass,
-                ..Default::default()
-            },
-            backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
-            ..Default::default()
-        };
-
-        let cylinder_draw_params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::draw_parameters::DepthTest::IfLess,
-                write: true,
-                ..Default::default()
-            },
-            stencil: glium::draw_parameters::Stencil {
-                reference_value_clockwise: 0,
-                test_clockwise: glium::StencilTest::IfEqual { mask: 0xFF },
-                write_mask_clockwise: 0xFF,
-                fail_operation_clockwise: glium::StencilOperation::Keep,
-                pass_depth_fail_operation_clockwise: glium::StencilOperation::Keep,
-                depth_pass_operation_clockwise: glium::StencilOperation::Keep,
-                ..Default::default()
-            },
-            ..Default::default()
-        };
         let params = glium::DrawParameters {
             depth: glium::Depth {
-                test: glium::DepthTest::IfLess, // Standard depth test
-                write: true,                    // Write to the depth buffer
+                test: glium::DepthTest::IfLess,
+                write: true,
                 ..Default::default()
             },
             ..Default::default()
