@@ -16,6 +16,7 @@ use molecular_visualization::{
     backend::{ApplicationContext, State},
     camera::{Camera, PerspectiveCamera, Ready, Virtual},
     cylinder_batch::CylinderBatch,
+    geometry::Rotate,
     molecule::Molecule,
     sphere_batch::SphereBatch,
 };
@@ -52,6 +53,7 @@ impl ApplicationContext for Application {
         molecule
             .init_molecule(display)
             .expect("Failed to populate molecule instances");
+        molecule.center_molecule();
 
         Self {
             camera,
@@ -197,7 +199,7 @@ impl ApplicationContext for Application {
             ..Default::default()
         };
 
-        frame.clear_color_and_depth((0.95, 0.95, 0.95, 1.0), 1.0);
+        frame.clear_color_and_depth((0.1294, 0.1294, 0.1294, 1.0), 1.0);
         frame.clear_stencil(1);
         frame
             .draw(
