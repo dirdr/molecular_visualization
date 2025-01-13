@@ -1,0 +1,14 @@
+ATOM      1  C1  ETH A   1       0.000   0.000   0.000  1.00  0.00           C  
+ATOM      2  C2  ETH A   1       1.339   0.000   0.000  1.00  0.00           C  
+ATOM      3  H1  ETH A   1      -0.558   0.935   0.000  1.00  0.00           H  
+ATOM      4  H2  ETH A   1      -0.558  -0.935   0.000  1.00  0.00           H  
+ATOM      5  H3  ETH A   1       1.897  -0.935   0.000  1.00  0.00           H  
+ATOM      6  H4  ETH A   1       1.897   0.935   0.000  1.00  0.00           H  
+TER       7      ETH A   1
+CONECT    1    2    3    4
+CONECT    2    1    5    6
+CONECT    3    1
+CONECT    4    1
+CONECT    5    2
+CONECT    6    2
+END

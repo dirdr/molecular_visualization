@@ -152,7 +152,7 @@ impl ApplicationContext for Application {
             camera_position: camera_position,
             debug_billboard: false,
             model: molecule_model,
-            u_show_silhouette: true,
+            u_show_silhouette: false,
         };
 
         self.arcball.resize(
