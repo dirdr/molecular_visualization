@@ -9,7 +9,6 @@ pub mod camera;
 pub mod cylinder_batch;
 pub mod geometry;
 pub mod molecule;
-pub mod shader;
 pub mod sphere_batch;
 
 pub static GLSL_TARGET: u16 = 410;
