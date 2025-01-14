@@ -19,3 +19,8 @@ The program is not capable of deducing the bonds of pdb files without `CONECT` r
   -h, --help         Print help
   -V, --version      Print version
 ```
+
+## Showcase
+![Methane Molecule](./methane.png)
+
+![Large Molecule with silhouete](./zoom_capability.png)
