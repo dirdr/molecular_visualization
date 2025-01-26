@@ -1,8 +1,10 @@
 # [MolViz](https://github.com/dirdr/molecular_visualization/edit/main/README.md)
+
 Simple OpenGL molecular visualization, capable of reading protein data bank files using imposter based rendering.
 This application has been written for the Scientific visualization course of the MIRI master in the _Facultat d'Informàtica de Barcelona_.
 
 ## Features
+
 - Sphere and Cylinders are rendered through imposters.
 - Perspective camera
 - Zoom
@@ -17,6 +19,7 @@ This application has been written for the Scientific visualization course of the
 > The program is not capable of deducing the bonds of pdb files without `CONECT` records.
 
 ## Usage
+
 You must have rust installed on your computer to start this program, see [rust website](https://www.rust-lang.org/).
 
 A version of OpenGL 4.1 + must also be available.
@@ -37,13 +40,15 @@ cargo run --release -- --file <FILE>
 ```
 
 ## Control
-| Control               | Key |
-| --------------------- | ------------ |
-| Rotate Molecule       | `Left-Click` |
-| Toggle Silhouete      | `Right-Click` |
-| Zoom                  | `Mouse-Wheel`|
+
+| Control          | Key           |
+| ---------------- | ------------- |
+| Rotate Molecule  | `Left-Click`  |
+| Toggle Silhouete | `Right-Click` |
+| Zoom             | `Mouse-Wheel` |
 
 ## Showcase
+
 ![Methane Molecule](./methane.png)
 
 ![Large Molecule with silhouete](./zoom_capability.png)
