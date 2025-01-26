@@ -16,4 +16,7 @@ use clap::Parser;
 pub struct Args {
     #[arg(short, long)]
     pub file: String,
+
+    #[arg(long, default_value = "false")]
+    pub fps: bool,
 }
