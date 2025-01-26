@@ -20,6 +20,7 @@ use molecular_visualization::{
     geometry::{Model, Rotate, Scale},
     molecule::Molecule,
     sphere_batch::SphereBatch,
+    ARGS,
 };
 use nalgebra::{Matrix4, Point3, Vector3};
 
@@ -157,7 +158,9 @@ impl ApplicationContext for Application {
 
     fn draw_frame(&mut self, display: &glium::Display<WindowSurface>) {
         self.fps_counter.update();
-        println!("FPS: {}", self.fps_counter.fps);
+        if ARGS.fps {
+            println!("FPS: {}", self.fps_counter.fps);
+        }
         let mut frame = display.draw();
         let uniforms = self.get_uniforms(&frame);
 
