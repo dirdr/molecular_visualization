@@ -62,17 +62,14 @@ impl Molecule {
         );
 
         let dimension = top_right - bottom_left;
-        // Get maximum dimension
         let max_dimension = dimension.x.max(dimension.y).max(dimension.z);
 
-        // Define your target size (how big you want the molecule to appear in your scene)
-        let target_size = 5.0; // Adjust this value based on your needs
+        let target_size = 5.0;
 
-        // Calculate scale factor
         let scale_factor = if max_dimension > target_size {
             target_size / max_dimension
         } else {
-            1.0 // Don't scale up if molecule is smaller than target
+            1.0
         };
 
         self.scale_factor = scale_factor;

@@ -20,7 +20,6 @@ pub trait Model {
 
 pub mod quad {
     use glium::implement_vertex;
-    /// Simple Quad static geometry definition
     pub struct Quad {}
 
     #[derive(Copy, Clone)]

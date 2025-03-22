@@ -2,7 +2,6 @@ use std::f32::consts::PI;
 
 use nalgebra::{Matrix4, Point3, Vector3};
 
-/// Define a generic Camera
 pub trait Camera {
     fn zoom(&mut self, zoom_amount: f32);
     fn get_view_matrix(&self) -> Matrix4<f32>;
