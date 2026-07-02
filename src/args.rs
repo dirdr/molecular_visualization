@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -15,7 +17,7 @@ use clap::Parser;
 )]
 pub struct Args {
     #[arg(short, long)]
-    pub file: String,
+    pub file: PathBuf,
 
     #[arg(long, default_value = "false")]
     pub fps: bool,

@@ -42,11 +42,16 @@ impl Molecule {
 
     pub fn init_molecule(&mut self) -> anyhow::Result<()> {
         let mut atom_map = HashMap::new();
-        let filename = format!("./resources/pdb/{}", &ARGS.file);
+        let path = &ARGS.file;
 
-        let pdb = pdbtbx::open(&filename).unwrap().0;
+        anyhow::ensure!(path.exists(), "File not found: {}", path.display());
 
-        let bonds = parse_bonds(&filename)?;
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Path contains invalid UTF-8: {}", path.display()))?;
+        let pdb = pdbtbx::open(path_str).unwrap().0;
+
+        let bonds = parse_bonds(path)?;
         let molecule_center = Self::calculate_molecule_center(&pdb);
         let bounding_box = pdb.bounding_box();
         let bottom_left = Point3::<f32>::new(
@@ -328,7 +333,7 @@ impl ConectRecord {
     }
 }
 
-fn parse_bonds(file_path: &str) -> anyhow::Result<Vec<ConectRecord>> {
+fn parse_bonds(file_path: &std::path::Path) -> anyhow::Result<Vec<ConectRecord>> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
 
