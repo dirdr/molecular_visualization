@@ -1,0 +1,38 @@
+name: Check
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  rust:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - run: cargo fmt --check
+      - run: cargo check --locked --all-targets
+      - run: cargo check --locked --no-default-features --lib
+      - run: cargo check --locked --target wasm32-unknown-unknown --no-default-features --features web --lib
+      - run: cargo clippy --locked --target wasm32-unknown-unknown --no-default-features --features web --lib -- -D warnings
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: cargo install wasm-pack --locked
+      - run: wasm-pack build --release --target web --out-dir web/pkg --no-pack --no-default-features --features web --locked
+      - run: npm ci
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm test
+        working-directory: web

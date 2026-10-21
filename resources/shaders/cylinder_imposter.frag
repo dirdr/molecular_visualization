@@ -30,6 +30,7 @@ void main() {
     vec3 ray_proj = ray_dir - dot(ray_dir, cylinder_dir) * cylinder_dir;
     vec3 oc_proj = oc - dot(oc, cylinder_dir) * cylinder_dir;
     float a = dot(ray_proj, ray_proj);
+    if (a < 0.000001) discard;
     float b = 2.0 * dot(ray_proj, oc_proj);
     float c = dot(oc_proj, oc_proj) - v_radius * v_radius;
 

@@ -39,6 +39,8 @@ cargo run --release -- --file <FILE>
   -V, --version      Print version
 ```
 
+The browser build runs the same Rust molecule logic, camera controls, and shaders through WebAssembly and WebGL 2.
+
 ## Control
 
 | Control          | Key           |

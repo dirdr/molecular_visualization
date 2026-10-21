@@ -33,8 +33,12 @@ void main() {
     vec3 camera_dir = normalize(camera_pos - transformed_start_pos);
 
     // Create basis for billboard
-    vec3 right = normalize(cross(cylinder_dir, camera_dir));
-    vec3 up = normalize(cross(right, cylinder_dir));
+    vec3 right = cross(cylinder_dir, camera_dir);
+    if (length(right) < 0.00001) {
+        right = cross(cylinder_dir, vec3(0.0, 1.0, 0.0));
+        if (length(right) < 0.00001) right = vec3(1.0, 0.0, 0.0);
+    }
+    right = normalize(right);
 
     float length_cylinder = distance(transformed_end_pos, transformed_start_pos);
 
