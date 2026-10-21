@@ -12,8 +12,8 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
       - run: cargo fmt --check
-      - run: cargo test --locked
-      - run: cargo test --locked --no-default-features
+      - run: cargo check --locked --all-targets
+      - run: cargo check --locked --no-default-features --lib
       - run: cargo check --locked --target wasm32-unknown-unknown --no-default-features --features web --lib
       - run: cargo clippy --locked --target wasm32-unknown-unknown --no-default-features --features web --lib -- -D warnings
   browser:

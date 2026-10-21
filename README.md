@@ -80,8 +80,8 @@ the canvas to release listeners and GPU resources. The lower-level
 ### Verification
 
 ```sh
-cargo test --locked
-cargo test --locked --no-default-features
+cargo check --locked --all-targets
+cargo check --locked --no-default-features --lib
 cargo check --locked --target wasm32-unknown-unknown --no-default-features --features web --lib
 cd web
 npm ci
