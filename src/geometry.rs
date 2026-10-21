@@ -19,15 +19,17 @@ pub trait Model {
 }
 
 pub mod quad {
+    #[cfg(feature = "desktop")]
     use glium::implement_vertex;
     pub struct Quad {}
 
     #[derive(Copy, Clone)]
     pub struct QuadVertex {
-        pos: [f32; 3],
-        uv_coordinates: [f32; 2],
+        pub pos: [f32; 3],
+        pub uv_coordinates: [f32; 2],
     }
 
+    #[cfg(feature = "desktop")]
     implement_vertex!(QuadVertex, pos, uv_coordinates);
 
     impl Quad {

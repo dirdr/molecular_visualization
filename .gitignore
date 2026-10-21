@@ -1,3 +1,8 @@
 /target
 .DS_Store
 /.idea
+
+/web/pkg
+/web/node_modules
+/web/test-results
+/web/playwright-report

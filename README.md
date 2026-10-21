@@ -39,6 +39,59 @@ cargo run --release -- --file <FILE>
   -V, --version      Print version
 ```
 
+## Browser build
+
+The browser build runs the Rust PDB parser, molecule preparation, camera, and
+arcball controls through WebAssembly. A WebGL 2 backend renders the same sphere
+and cylinder imposters as the desktop application. Both backends embed the GLSL
+files in `resources/shaders`; the browser backend adapts their version header to
+GLSL ES 3.00. There is no separate JavaScript implementation of the molecule or
+camera logic.
+
+Install [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/), then run:
+
+```sh
+rustup target add wasm32-unknown-unknown
+wasm-pack build --release --target web --out-dir web/pkg --no-pack --no-default-features --features web --locked
+python3 -m http.server 8000
+```
+
+Open `http://localhost:8000/web/?molecule=methane`. Replace `methane` with the
+name of any PDB file in `resources/pdb`. Desktop builds continue to use Glium
+through the default `desktop` feature.
+
+To embed the viewer, serve `web/viewer.js` alongside the generated `web/pkg`
+directory and call it with a canvas and PDB text:
+
+```js
+import { mountMolecule } from "./viewer.js";
+
+const response = await fetch("/molecules/methane.pdb");
+if (!response.ok) throw new Error("Could not load molecule");
+const dispose = await mountMolecule(canvas, await response.text(), onError);
+```
+
+The host selects the file; the viewer does not add a file picker or controls.
+`mountMolecule` handles pointer rotation, wheel zoom, keyboard input, resizing,
+and WebGL context restoration. Call the returned `dispose` function when removing
+the canvas to release listeners and GPU resources. The lower-level
+`MoleculeViewer` Wasm class is also available for hosts with their own input loop.
+
+### Verification
+
+```sh
+cargo test --locked
+cargo test --locked --no-default-features
+cargo check --locked --target wasm32-unknown-unknown --no-default-features --features web --lib
+cd web
+npm ci
+npx playwright install chromium
+npm test
+```
+
+The browser tests render every supplied molecule and check rotation, zoom,
+context restoration, invalid input, and actual GPU output.
+
 ## Control
 
 | Control          | Key           |

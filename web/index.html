@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MolViz</title>
+    <style>
+      body {
+        margin: 0;
+        background: #111;
+        color: #eee;
+        font-family: system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 80vh;
+        touch-action: none;
+        cursor: grab;
+      }
+      #status {
+        padding-inline: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas
+      id="molecule"
+      tabindex="0"
+      aria-label="Molecule. Drag to rotate; scroll to zoom."
+    ></canvas>
+    <p id="status" role="status">Loading molecule</p>
+    <script type="module">
+      import { mountMolecule } from "./viewer.js";
+      const status = document.querySelector("#status");
+      let dispose;
+      let closed = false;
+      addEventListener(
+        "pagehide",
+        () => {
+          closed = true;
+          dispose?.();
+        },
+        { once: true },
+      );
+      try {
+        const name =
+          new URLSearchParams(location.search).get("molecule") ?? "methane";
+        if (!/^[a-z]+$/.test(name)) throw new Error("Invalid molecule name");
+        const response = await fetch(`../resources/pdb/${name}.pdb`);
+        if (!response.ok) throw new Error("Could not load molecule");
+        const pdb = await response.text();
+        if (!closed) {
+          dispose = await mountMolecule(
+            document.querySelector("canvas"),
+            pdb,
+            (error) => {
+              status.textContent = error ? String(error) : "";
+            },
+          );
+          if (closed) dispose();
+          else status.textContent = "";
+        }
+      } catch (error) {
+        status.textContent = String(error);
+      }
+    </script>
+  </body>
+</html>
