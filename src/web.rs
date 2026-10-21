@@ -333,7 +333,7 @@ impl MoleculeViewer {
 
     pub fn zoom(&mut self, delta: f32) {
         if delta.is_finite() {
-            self.camera.zoom(-delta.clamp(-200.0, 200.0) * 0.04);
+            self.camera.zoom(-delta.clamp(-200.0, 200.0) * 0.2);
         }
     }
 
