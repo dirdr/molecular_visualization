@@ -3,9 +3,10 @@ use glium::{
     VertexBuffer,
 };
 
-pub use crate::instance::SphereInstanceData;
-
-use crate::geometry::quad::{Quad, QuadVertex};
+use crate::{
+    geometry::quad::{Quad, QuadVertex},
+    instance::SphereInstanceData,
+};
 
 /// This struct hold a instancing imposter sphere batch informations.
 /// `vertex_buffer` hold the quad geometry for the sphere imposter, and `index_buffer` contains the
@@ -32,8 +33,8 @@ impl SphereBatch {
         })
     }
 
-    pub fn update_instances(&mut self, instances: &[SphereInstanceData]) {
-        self.instances = instances.to_vec();
+    pub fn update_instances(&mut self, instances: Vec<SphereInstanceData>) {
+        self.instances = instances;
     }
 
     pub fn get_instance(&self, index: usize) -> Option<&SphereInstanceData> {

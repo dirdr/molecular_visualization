@@ -37,8 +37,8 @@ impl Molecule {
         let text = std::fs::read_to_string(&ARGS.file)?;
         let data = crate::molecule_data::MoleculeData::from_pdb(&text)?;
         self.scale_factor = data.scale_factor;
-        self.atoms.update_instances(&data.atoms);
-        self.bonds.update_instances(&data.bonds);
+        self.atoms.update_instances(data.atoms);
+        self.bonds.update_instances(data.bonds);
         Ok(())
     }
 

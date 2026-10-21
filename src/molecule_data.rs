@@ -23,16 +23,19 @@ impl MoleculeData {
             .map_err(|errors| anyhow::anyhow!("Could not parse PDB: {errors:?}"))?;
         anyhow::ensure!(pdb.atom_count() > 0, "No atoms found in the PDB file");
         let center = Self::calculate_molecule_center(&pdb);
-        let mut atom_map = HashMap::new();
-        let atoms = Self::create_atom_instances(&pdb, &mut atom_map, center);
+        let atoms = Self::create_atom_instances(&pdb, center);
         anyhow::ensure!(
             atoms
                 .iter()
                 .all(|atom| atom.instance_pos.iter().all(|v| v.is_finite())),
             "Non-finite atom coordinates"
         );
-        let records: Vec<_> = text.lines().filter_map(ConectRecord::from_line).collect();
-        let bonds = Self::create_bond_instances(&records, &atom_map, center);
+        let atom_map = pdb
+            .atoms()
+            .zip(&atoms)
+            .map(|(atom, instance)| (atom.serial_number(), instance))
+            .collect();
+        let bonds = Self::create_bond_instances(text, &atom_map);
         let bounds = pdb.bounding_box();
         let dimension = [
             (bounds.1 .0 - bounds.0 .0) as f32,
@@ -60,76 +63,50 @@ impl MoleculeData {
         })
     }
 
-    fn create_atom_instances<'a>(
-        pdb: &'a PDB,
-        atom_map: &mut HashMap<usize, &'a Atom>,
-        molecule_center: Point3<f32>,
-    ) -> Vec<SphereInstanceData> {
-        let mut atom_instances = Vec::new();
-
-        for model in pdb.models() {
-            for atom in model.atoms() {
-                atom_map.insert(atom.serial_number(), atom);
-
+    fn create_atom_instances(pdb: &PDB, molecule_center: Point3<f32>) -> Vec<SphereInstanceData> {
+        pdb.atoms()
+            .map(|atom| {
                 let position = Point3::new(
                     atom.x() as f32 - molecule_center.x,
                     atom.y() as f32 - molecule_center.y,
                     atom.z() as f32 - molecule_center.z,
                 );
-                let color = Self::atom_color(atom);
-                let radius = Self::atom_size(atom);
-                atom_instances.push(SphereInstanceData::new(position, color, radius));
-            }
-        }
-        atom_instances
+                SphereInstanceData::new(position, Self::atom_color(atom), Self::atom_size(atom))
+            })
+            .collect()
     }
 
-    fn create_bond_instances<'a>(
-        bonds: &[ConectRecord],
-        atom_map: &'a HashMap<usize, &'a Atom>,
-        molecule_center: Point3<f32>,
+    fn create_bond_instances(
+        text: &str,
+        atom_map: &HashMap<usize, &SphereInstanceData>,
     ) -> Vec<CylinderInstanceData> {
-        let mut cylinder_instances = vec![];
+        let mut cylinder_instances = Vec::new();
         let mut already_connected = HashSet::new();
 
-        for bond in bonds {
-            let start = match atom_map.get(&(bond.source_atom)) {
-                Some(atom) => atom,
-                None => continue,
+        for bond in text.lines().filter_map(ConectRecord::from_line) {
+            let Some(start) = atom_map.get(&bond.source_atom) else {
+                continue;
             };
 
-            for &connected in &bond.bonded_atoms {
-                let end = match atom_map.get(&(connected)) {
-                    Some(atom) => atom,
-                    None => continue,
+            for connected in bond.bonded_atoms {
+                let Some(end) = atom_map.get(&connected) else {
+                    continue;
                 };
-
-                if already_connected.contains(&(start.serial_number(), end.serial_number()))
-                    || already_connected.contains(&(end.serial_number(), start.serial_number()))
-                {
+                let pair = (
+                    bond.source_atom.min(connected),
+                    bond.source_atom.max(connected),
+                );
+                if !already_connected.insert(pair) {
                     continue;
                 }
 
-                let start_pos = [
-                    start.x() as f32 - molecule_center.x,
-                    start.y() as f32 - molecule_center.y,
-                    start.z() as f32 - molecule_center.z,
-                ];
-                let end_pos = [
-                    end.x() as f32 - molecule_center.x,
-                    end.y() as f32 - molecule_center.y,
-                    end.z() as f32 - molecule_center.z,
-                ];
-
                 cylinder_instances.push(CylinderInstanceData {
-                    instance_start_pos: start_pos,
-                    instance_end_pos: end_pos,
-                    instance_color_first_half: Self::atom_color(start).into(),
-                    instance_color_second_half: Self::atom_color(end).into(),
+                    instance_start_pos: start.instance_pos,
+                    instance_end_pos: end.instance_pos,
+                    instance_color_first_half: start.instance_color,
+                    instance_color_second_half: end.instance_color,
                     instance_radius: 0.15,
                 });
-
-                already_connected.insert((start.serial_number(), end.serial_number()));
             }
         }
         cylinder_instances
@@ -252,24 +229,15 @@ impl ConectRecord {
         if !line.is_ascii() || !line.starts_with("CONECT") {
             return None;
         }
-        let fields: Vec<_> = line
-            .as_bytes()
-            .get(6..)?
-            .chunks(5)
-            .filter_map(|field| {
-                std::str::from_utf8(field)
-                    .ok()?
-                    .trim()
-                    .parse::<usize>()
-                    .ok()
-            })
-            .collect();
-        let (&source_atom, bonded) = fields.split_first()?;
-        let bonded_atoms = bonded
-            .iter()
-            .copied()
-            .filter(|&id| id != source_atom)
-            .collect();
+        let mut fields = line.as_bytes().get(6..)?.chunks(5).filter_map(|field| {
+            std::str::from_utf8(field)
+                .ok()?
+                .trim()
+                .parse::<usize>()
+                .ok()
+        });
+        let source_atom = fields.next()?;
+        let bonded_atoms = fields.filter(|&id| id != source_atom).collect();
 
         Some(ConectRecord {
             source_atom,

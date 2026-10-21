@@ -3,9 +3,10 @@ use glium::{
     VertexBuffer,
 };
 
-pub use crate::instance::CylinderInstanceData;
-
-use crate::geometry::quad::{Quad, QuadVertex};
+use crate::{
+    geometry::quad::{Quad, QuadVertex},
+    instance::CylinderInstanceData,
+};
 
 /// This struct hold a instancing imposter cylinder batch informations.
 /// `vertex_buffer` hold the quad geometry for the imposter, and `index_buffer` contains the
@@ -32,8 +33,8 @@ impl CylinderBatch {
         })
     }
 
-    pub fn update_instances(&mut self, instances: &[CylinderInstanceData]) {
-        self.instances = instances.to_vec();
+    pub fn update_instances(&mut self, instances: Vec<CylinderInstanceData>) {
+        self.instances = instances;
     }
 
     pub fn get_instance(&self, index: usize) -> Option<&CylinderInstanceData> {
